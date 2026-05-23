@@ -137,11 +137,10 @@ ensure_fbos(CathodeShaderState *st, int w, int h)
 {
     if (w == st->width && h == st->height)
         return;
-    delete_fbos(st);
+    if (st->tex_terminal)
+        glDeleteTextures(1, &st->tex_terminal);
     st->width = w;
     st->height = h;
-    create_fbo(&st->fbo_blur_h, &st->tex_blur_h, w, h);
-    create_fbo(&st->fbo_blur_v, &st->tex_blur_v, w, h);
     glGenTextures(1, &st->tex_terminal);
     glBindTexture(GL_TEXTURE_2D, st->tex_terminal);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA,
@@ -251,60 +250,42 @@ render_cb(GtkGLArea *area, GdkGLContext *_ctx, gpointer data)
 
     while (glGetError() != GL_NO_ERROR) {}
 
-    /* skip FBO creation - just allocate terminal texture */
-    GtkWidget *term = st->terminal;
-    if (!GTK_IS_WIDGET(term)) return FALSE;
-    int w = gtk_widget_get_width(term);
-    int h = gtk_widget_get_height(term);
-    if (w <= 0 || h <= 0) return FALSE;
+    capture_terminal(st);
 
-    if (w != st->width || h != st->height) {
-        if (st->tex_terminal) glDeleteTextures(1, &st->tex_terminal);
-        st->width = w;
-        st->height = h;
-        glGenTextures(1, &st->tex_terminal);
-        glBindTexture(GL_TEXTURE_2D, st->tex_terminal);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA,
-                     GL_UNSIGNED_BYTE, NULL);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_BLUE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, GL_RED);
-    }
+    if (st->width <= 0 || st->height <= 0) return FALSE;
 
-    /* capture terminal */
-    GtkWidget *parent = gtk_widget_get_parent(term);
-    if (parent) {
-        GtkSnapshot *snap = gtk_snapshot_new();
-        gtk_widget_snapshot_child(parent, term, snap);
-        GskRenderNode *node = gtk_snapshot_free_to_node(snap);
-        cairo_surface_t *cs = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
-        cairo_t *cr = cairo_create(cs);
-        gsk_render_node_draw(node, cr);
-        cairo_destroy(cr);
-        gsk_render_node_unref(node);
-        cairo_surface_flush(cs);
-        int stride = cairo_image_surface_get_stride(cs);
-        glPixelStorei(GL_UNPACK_ROW_LENGTH, stride / 4);
-        glBindTexture(GL_TEXTURE_2D, st->tex_terminal);
-        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h,
-                        GL_RGBA, GL_UNSIGNED_BYTE,
-                        cairo_image_surface_get_data(cs));
-        glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
-        cairo_surface_destroy(cs);
-    }
+    int fbo_w = st->width;
+    int fbo_h = st->height;
 
-    glClearColor(1.0f, 0.0f, 1.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT);
+    /* bloom FBOs disabled — skip to avoid GLES FBO issues */
+    bool do_bloom = false;
+    (void)do_bloom;
+
+    int area_w = gtk_widget_get_width(GTK_WIDGET(area));
+    int area_h = gtk_widget_get_height(GTK_WIDGET(area));
+    if (area_w <= 0 || area_h <= 0) return FALSE;
+
+    glViewport(0, 0, area_w, area_h);
+    glBindVertexArray(st->vao);
+
+    glUseProgram(st->program_retro);
+    upload_retro(st, fbo_w, fbo_h);
+
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, st->tex_terminal);
+
+    glActiveTexture(GL_TEXTURE1);
+    glBindTexture(GL_TEXTURE_2D, st->tex_terminal);
+
+    glDrawArrays(GL_TRIANGLES, 0, 6);
 
     GLenum err = glGetError();
     if (err != GL_NO_ERROR)
-        g_warning("STEP2 GL error: 0x%x (w=%d h=%d)", err,
-                  st->width, st->height);
+        g_warning("CRT GL error: 0x%x", err);
 
+    glBindVertexArray(0);
     glFlush();
+
     return TRUE;
 }
 
