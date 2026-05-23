@@ -1,7 +1,14 @@
 [general]
+# TOML theme imports — merge color tables into the main config.
+# Paths starting with ~/ are expanded to $HOME/.
 import = [
     "~/.config/cathode/themes/{theme}.toml"
 ]
+
+# Auto-reload config when cathode.toml changes on disk.
+# true (default) = watch file and re-apply settings immediately.
+# false = require restart to pick up config changes.
+auto_reload = true
 
 [terminal]
 scrollback = 2000
@@ -20,20 +27,20 @@ TERM = "xterm-256color"
 [font]
 family = "monospace"
 # style = "Regular"
-size = 11
+size = 12
 
 # CRT retro effect configuration
 # Set any value to 0 to disable the corresponding effect
 [crt]
 # Intensity of scanline darkness (0.0 = none, 1.0 = full black)
 # Higher values make alternating pixel rows darker
-# Default: 0.06
-scanline_intensity = 0.06
+# Default: 0.12
+scanline_intensity = 0.12
 
 # Number of pixels per scanline group
 # Each group of N rows alternates between bright and dim
-# Default: 2.0
-scanline_period = 2.0
+# Default: 4.0
+scanline_period = 4.0
 
 # Bloom (glow around bright content) strength
 # Default: 0.12
@@ -72,11 +79,38 @@ mask_strength = 0.012
 # Default: 0.0 (off)
 # curvature = 0.03
 
-# Chromatic aberration strength (0.0 = off, 0.005~0.01 = typical)
+# Chromatic aberration strength (0.0 = off, 0.0001~0.001 = typical)
 # Simulates RGB beam convergence error at the screen edges.
 # Red and blue channels shift apart near the edges.
 # Default: 0.0 (off)
-# chromatic_aberration = 0.001
+# chromatic_aberration = 0.0005
+
+# Edge softening (0.0 = off, 0.0~0.3 = typical)
+# Sub-pixel gaussian blur that softens harsh pixel edges.
+# Simulates the CRT beam spot spreading across adjacent phosphor dots.
+# Default: 0.12
+softening = 0.12
+
+# Color bleed / phosphor trail (0.0 = off, 0.0~0.2 = typical)
+# Horizontal luminance-dependent color smearing with slight rightward bias.
+# Simulates electron beam scan-direction phosphor persistence.
+# Only affects bright content above ~0.2 luma.
+# Default: 0.08
+color_bleed = 0.08
+
+# Pixel rounding (0.0 = off, 0.0~0.4 = typical)
+# Creates rounded, soft-looking pixels via a 2D gaussian beam spot.
+# Simulates the circular cross-section of CRT electron beams.
+# Higher values produce more pronounced "dot" appearance.
+# Default: 0.15
+rounding = 0.15
+
+# Depth shadows (0.0 = off, 0.0~0.3 = typical)
+# Bezel shadow and inner depth darkening toward screen edges.
+# Simulates the CRT glass tube depth and shadow mask frame.
+# Works independently of curvature/vignetting.
+# Default: 0.10
+shadow_strength = 0.10
 
 [bindings]
 keys = [

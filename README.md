@@ -4,10 +4,20 @@ A GTK4/libadwaita terminal emulator with a retro CRT scanline shader, tabs, sear
 
 ## Features
 
-- **CRT retro effect** — scanlines, phosphor glow, aperture grille, barrel curvature, chromatic aberration, vignetting, film grain
+- **CRT retro effect pipeline** — 9 configurable effects with uniform control:
+  - Scanlines (gaussian beam-spot profile)
+  - Phosphor glow (P22 warm tone, blue ZnS:Ag emphasis)
+  - Inline bloom (gaussian glow, no FBO overhead)
+  - Aperture grille (RGB vertical stripe mask)
+  - Edge softening (sub-pixel gaussian)
+  - Color bleed (horizontal phosphor trail)
+  - Pixel rounding (2D circular beam spot)
+  - Depth shadows (bezel + inner shadow)
+  - Curvature + chromatic aberration + vignetting + film grain + warm white point
 - **Multiple tabs** — AdwTabView + AdwTabBar with keyboard shortcuts
 - **Search** — Ctrl+Shift+F with VTE regex, Enter/Shift+Enter navigation
-- **TOML config** — themes, fonts, shell, CRT parameters all configurable
+- **Config auto-reload** — GFileMonitor watches `cathode.toml`, applies changes on save
+- **TOML config** — themes, fonts, shell, CRT parameters all configurable with sensible defaults
 - **Header bar** — window title follows terminal, new-tab button
 
 ## Screenshot
@@ -34,6 +44,7 @@ meson install -C build
 ```toml
 [general]
 import = ["~/.config/cathode/themes/dracula.toml"]
+auto_reload = true       # watch config file for changes
 
 [terminal]
 scrollback = 2000
@@ -50,13 +61,17 @@ size = 11
 scanline_intensity = 0.06
 scanline_period = 2.0
 bloom_strength = 0.12
-bloom_sigma = 3.0
+bloom_sigma = 2.5
 glow_strength = 0.06
 glow_threshold_low = 0.15
 glow_threshold_high = 0.6
 mask_strength = 0.012
 curvature = 0.0
 chromatic_aberration = 0.0
+softening = 0.12
+color_bleed = 0.08
+rounding = 0.15
+shadow_strength = 0.10
 ```
 
 ### CRT Parameters
@@ -65,16 +80,23 @@ chromatic_aberration = 0.0
 |-----|---------|-------------|
 | `scanline_intensity` | `0.06` | Scanline darkness (0=off, 1=black) |
 | `scanline_period` | `2.0` | Pixel rows per scanline group |
-| `bloom_strength` | `0.12` | Light scattering intensity |
-| `bloom_sigma` | `3.0` | Bloom blur radius (pixels) |
+| `bloom_strength` | `0.12` | Bloom glow intensity around bright content |
+| `bloom_sigma` | `2.5` | Bloom blur radius (kernel spread) |
 | `glow_strength` | `0.06` | Phosphor glow on bright text |
 | `glow_threshold_low` | `0.15` | Min luma for glow effect |
-| `glow_threshold_high` | `0.6` | Max luma for full glow |
+| `glow_threshold_high` | `0.6` | Luma threshold for full glow |
 | `mask_strength` | `0.012` | Aperture grille stripe visibility |
 | `curvature` | `0.0` | Barrel distortion (0.01–0.08 typical) |
 | `chromatic_aberration` | `0.0` | RGB separation at edges |
+| `softening` | `0.12` | Edge softening (sub-pixel gaussian) |
+| `color_bleed` | `0.08` | Horizontal color smear (phosphor trail) |
+| `rounding` | `0.15` | Pixel roundness (2D beam spot) |
+| `shadow_strength` | `0.10` | Bezel + inner depth shadow |
 
 Set any value to `0` to disable that effect. All CRT params at `0` → GLArea hidden, zero overhead.
+
+**Auto-reload:** Edit and save `cathode.toml` — changes apply immediately to all open tabs.
+Set `auto_reload = false` in `[general]` to require a restart.
 
 ### Theme Format
 
@@ -139,10 +161,15 @@ GtkOverlay
 ```
 
 Terminal is snapshotted via GTK's scene graph to a Cairo surface, uploaded to an OpenGL
-texture, then processed by the CRT fragment shader. GLArea is transparent when all CRT
-effects are disabled.
+texture, then processed by a single-pass CRT fragment shader with 14 configurable effects.
+GLArea is transparent when all CRT effects are disabled.
+
+Bloom uses an inline gaussian kernel (no FBO) sampling the terminal texture directly,
+avoiding GLES framebuffer compatibility issues.
+
+Config is monitored via GFileMonitor — save `cathode.toml` and settings re-apply immediately.
 
 ## License
 
-MIT. CRT shader ported from [Windows Terminal](https://github.com/microsoft/terminal) (MIT).
+MIT. CRT shader based on CRT-Lottes approach (inline bloom, gaussian beam scanlines).
 TOML parser: [tomlc99](https://github.com/cktan/tomlc99) (MIT).

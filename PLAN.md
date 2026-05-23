@@ -23,7 +23,7 @@
 - Cairo-based terminal capture pipeline
 - GL texture upload with hardware swizzle (GL_RGBA + GL_TEXTURE_SWIZZLE)
 - HiDPI scale factor handling
-- Single-pass rendering (bloom FBOs disabled — see issues)
+- Single-pass rendering
 
 ## Phase 4: Tabs ✅
 
@@ -60,6 +60,28 @@
 - Window title follows terminal `window-title-changed`
 - Flat-style new-tab button (left-aligned, no frame)
 
+## Phase 9: CRT Shader Overhaul ✅
+
+- **Inline bloom** — 2D gaussian kernel sampled from terminal texture, no FBO
+  - Replaces disabled FBO pipeline, fixes `GL_INVALID_FRAMEBUFFER_OPERATION` on GLES
+  - Adjustable spread via `bloom_sigma`, luminance-gated via `smoothstep`
+- **Edge softening** — 3×3 gaussian softening of pixel edges
+- **Color bleed** — asymmetric horizontal luminance-dependent color smearing
+- **Pixel rounding** — 2D gaussian beam spot simulating circular CRT beams
+- **Depth shadows** — bezel shadow + inner depth darkening at screen edges
+- Removed `program_blur`, `fbo_blur_h/v`, `tex_blur_h/v`, `blur.frag` from resources
+- Simplified `render_cb` to single-pass: capture → retro shader
+- All 5 new effects configurable via `[crt]` TOML section
+
+## Phase 10: Config Auto-Reload ✅
+
+- `GFileMonitor` watching `~/.config/cathode/cathode.toml`
+- 500ms debounce to avoid rapid re-parse
+- `auto_reload` toggle in `[general]` (default `true`)
+- On change: re-parse file, re-apply terminal settings and CRT params to all tabs
+- GLArea visibility refreshed based on active effects
+- Monitor cleanup on application exit
+
 ## Debugging & Fixes ✅
 
 - Fixed GL_BGRA invalid in GLES 3.0 → GL_RGBA + texture swizzle
@@ -73,11 +95,21 @@
 - Fixed `AdwApplicationWindow` → `adw_application_window_set_content()`
 - Fixed config_path memory leak
 - Added GL error diagnostics (`glCheckFramebufferStatus`, `glGetError`)
+- Fixed bloom FBO → replaced with inline single-pass bloom
 
 ## Open Issues
 
 | Issue | Status | Notes |
 |-------|--------|-------|
-| Bloom FBO GL_INVALID_FRAMEBUFFER_OPERATION | Disabled | 2-pass blur FBOs trigger 0x506 on Mesa GLES 3.2. Kept single-pass CRT without bloom blur. |
 | `vte_terminal_get_window_title` deprecated | Tolerated | No non-deprecated replacement in VTE GTK4. |
-| FBO investigation for bloom | TODO | Try explicit sized format (GL_RGBA8), separate DRAW/READ framebuffer bindings, or non-FBO blur (merged into retro.frag) |
+| Theme import `{theme}` placeholder | TODO | Support variable substitution in import paths for quick theme switching. |
+| Möbius/3D warp mode | TODO | Stretch goal — configurable CRT geometry transforms. |
+
+## Future
+
+- Command palette (Ctrl+Shift+P)
+- Drag-and-drop tabs between windows
+- Split panes
+- Session restore
+- Drop-down / quake mode
+- Color scheme import (Xresources, iTerm2)
