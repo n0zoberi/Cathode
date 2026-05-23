@@ -23,6 +23,15 @@ on_close_tab(GSimpleAction *action, GVariant *param, gpointer data)
 }
 
 static void
+on_toggle_search(GSimpleAction *action, GVariant *param, gpointer data)
+{
+    (void)action;
+    (void)param;
+    (void)data;
+    cathode_tab_toggle_search();
+}
+
+static void
 on_window_destroy(GtkWindow *window, GtkApplication *app)
 {
     GList *windows = gtk_application_get_windows(app);
@@ -41,8 +50,9 @@ on_activate(GtkApplication *app, gpointer user_data)
     gtk_window_set_title(GTK_WINDOW(window), "Cathode");
 
     GActionEntry win_entries[] = {
-        { "new-tab", on_new_tab, NULL, NULL, NULL },
-        { "close-tab", on_close_tab, NULL, NULL, NULL },
+        { "new-tab", on_new_tab, NULL, NULL, NULL, {0} },
+        { "close-tab", on_close_tab, NULL, NULL, NULL, {0} },
+        { "toggle-search", on_toggle_search, NULL, NULL, NULL, {0} },
     };
     g_action_map_add_action_entries(G_ACTION_MAP(window),
                                      win_entries,
@@ -53,6 +63,8 @@ on_activate(GtkApplication *app, gpointer user_data)
         "win.new-tab", (const char *[]) { "<Ctrl><Shift>T", NULL });
     gtk_application_set_accels_for_action(GTK_APPLICATION(app),
         "win.close-tab", (const char *[]) { "<Ctrl><Shift>W", NULL });
+    gtk_application_set_accels_for_action(GTK_APPLICATION(app),
+        "win.toggle-search", (const char *[]) { "<Ctrl><Shift>F", NULL });
 
     GtkWidget *tab_content = cathode_tab_view_new(app_config,
                                                    GTK_WINDOW(window));

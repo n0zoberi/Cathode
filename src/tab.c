@@ -1,18 +1,21 @@
 #include "tab.h"
 #include "terminal.h"
 #include "shader.h"
+#include "search.h"
 #include <vte/vte.h>
 
-static CathodeConfig *st_cfg;
-static AdwTabView    *st_view;
-static GtkWindow     *st_window;
+static CathodeConfig *cfg;
+static AdwTabView    *view;
+static GtkWindow     *win;
+static GtkWidget     *search_widget;
+static AdwTabPage    *prev_page;
 
 static void
 on_title_changed(VteTerminal *term, gpointer data)
 {
-    AdwTabPage *page = ADW_TAB_PAGE(data);
     const char *title = vte_terminal_get_window_title(term);
-    adw_tab_page_set_title(page, title && *title ? title : "Cathode");
+    adw_tab_page_set_title(ADW_TAB_PAGE(data),
+                           title && *title ? title : "Cathode");
 }
 
 static void
@@ -20,76 +23,101 @@ on_child_exited(VteTerminal *term, int status, gpointer data)
 {
     (void)term;
     (void)status;
-    AdwTabPage *page = ADW_TAB_PAGE(data);
-    adw_tab_view_close_page(st_view, page);
+    adw_tab_view_close_page(view, ADW_TAB_PAGE(data));
 }
 
 static void
-on_close_page(AdwTabView *view, AdwTabPage *page, gpointer data)
+on_close_page(AdwTabView *v, AdwTabPage *page, gpointer data)
 {
     (void)data;
-    adw_tab_view_close_page_finish(view, page, TRUE);
-
-    if (adw_tab_view_get_n_pages(view) == 0 && st_window)
-        gtk_window_close(st_window);
+    adw_tab_view_close_page_finish(v, page, TRUE);
+    if (adw_tab_view_get_n_pages(v) == 0 && win)
+        gtk_window_close(win);
 }
 
 static GtkWidget *
-create_tab_content(void)
+create_tab(void)
 {
-    GtkWidget *term = GTK_WIDGET(cathode_terminal_new(st_cfg));
-    GtkWidget *overlay = cathode_shader_overlay_new(st_cfg, term);
-
-    cathode_terminal_spawn(VTE_TERMINAL(term), st_cfg);
-
+    GtkWidget *term = GTK_WIDGET(cathode_terminal_new(cfg));
+    GtkWidget *overlay = cathode_shader_overlay_new(cfg, term);
+    cathode_terminal_spawn(VTE_TERMINAL(term), cfg);
     return overlay;
 }
 
-static void
-on_page_attached(AdwTabView *view, AdwTabPage *page, int pos, gpointer data)
+static VteTerminal *
+get_terminal_from_page(AdwTabPage *page)
 {
-    (void)view;
+    GtkWidget *overlay = adw_tab_page_get_child(page);
+    GtkWidget *first = gtk_widget_get_first_child(overlay);
+    if (first && VTE_IS_TERMINAL(first))
+        return VTE_TERMINAL(first);
+    return NULL;
+}
+
+static void
+on_page_attached(AdwTabView *v, AdwTabPage *page, int pos, gpointer data)
+{
+    (void)v;
     (void)pos;
     (void)data;
 
-    GtkWidget *overlay = adw_tab_page_get_child(page);
-    GtkWidget *first = gtk_widget_get_first_child(overlay);
+    VteTerminal *term = get_terminal_from_page(page);
+    if (!term) return;
 
-    if (first && VTE_IS_TERMINAL(first)) {
-        VteTerminal *vte = VTE_TERMINAL(first);
+    g_signal_connect(term, "window-title-changed",
+                     G_CALLBACK(on_title_changed), page);
+    g_signal_connect(term, "child-exited",
+                     G_CALLBACK(on_child_exited), page);
 
-        g_signal_connect(vte, "window-title-changed",
-                         G_CALLBACK(on_title_changed), page);
-        g_signal_connect(vte, "child-exited",
-                         G_CALLBACK(on_child_exited), page);
+    const char *title = vte_terminal_get_window_title(term);
+    adw_tab_page_set_title(page, title && *title ? title : "Cathode");
+}
 
-        const char *title = vte_terminal_get_window_title(vte);
-        adw_tab_page_set_title(page, title && *title ? title : "Cathode");
-    }
+static void
+on_selected_page_changed(AdwTabView *v, GParamSpec *pspec, gpointer data)
+{
+    (void)v;
+    (void)pspec;
+    (void)data;
+
+    AdwTabPage *page = adw_tab_view_get_selected_page(view);
+    if (page == prev_page) return;
+    prev_page = page;
+
+    VteTerminal *term = get_terminal_from_page(page);
+    cathode_search_set_terminal(search_widget, term);
+    gtk_widget_grab_focus(GTK_WIDGET(term));
+
+    if (term)
+        vte_terminal_set_cursor_blink_mode(term, cfg->cursor_blink == CURSOR_BLINK_OFF ?
+            VTE_CURSOR_BLINK_OFF :
+            cfg->cursor_blink == CURSOR_BLINK_SYSTEM ?
+            VTE_CURSOR_BLINK_SYSTEM : VTE_CURSOR_BLINK_ON);
 }
 
 GtkWidget *
-cathode_tab_view_new(CathodeConfig *cfg, GtkWindow *window)
+cathode_tab_view_new(CathodeConfig *c, GtkWindow *window)
 {
-    st_cfg = cfg;
-    st_window = window;
+    cfg = c;
+    win = window;
 
-    AdwTabView *view = ADW_TAB_VIEW(adw_tab_view_new());
-    st_view = view;
+    view = ADW_TAB_VIEW(adw_tab_view_new());
 
-    AdwTabViewShortcuts shortcuts = ADW_TAB_VIEW_SHORTCUT_NONE;
-    shortcuts |= ADW_TAB_VIEW_SHORTCUT_CONTROL_HOME;
-    shortcuts |= ADW_TAB_VIEW_SHORTCUT_CONTROL_END;
-    shortcuts |= ADW_TAB_VIEW_SHORTCUT_CONTROL_TAB;
-    shortcuts |= ADW_TAB_VIEW_SHORTCUT_CONTROL_SHIFT_TAB;
-    shortcuts |= ADW_TAB_VIEW_SHORTCUT_CONTROL_PAGE_UP;
-    shortcuts |= ADW_TAB_VIEW_SHORTCUT_CONTROL_PAGE_DOWN;
-    adw_tab_view_set_shortcuts(view, shortcuts);
+    AdwTabViewShortcuts sc = ADW_TAB_VIEW_SHORTCUT_NONE;
+    sc |= ADW_TAB_VIEW_SHORTCUT_CONTROL_HOME;
+    sc |= ADW_TAB_VIEW_SHORTCUT_CONTROL_END;
+    sc |= ADW_TAB_VIEW_SHORTCUT_CONTROL_TAB;
+    sc |= ADW_TAB_VIEW_SHORTCUT_CONTROL_SHIFT_TAB;
+    sc |= ADW_TAB_VIEW_SHORTCUT_CONTROL_PAGE_UP;
+    sc |= ADW_TAB_VIEW_SHORTCUT_CONTROL_PAGE_DOWN;
+    adw_tab_view_set_shortcuts(view, sc);
 
     g_signal_connect(view, "page-attached",
                      G_CALLBACK(on_page_attached), NULL);
     g_signal_connect(view, "close-page",
                      G_CALLBACK(on_close_page), NULL);
+    g_signal_connect(view, "notify::selected-page",
+                     G_CALLBACK(on_selected_page_changed), NULL);
 
     AdwToolbarView *toolbar = ADW_TOOLBAR_VIEW(adw_toolbar_view_new());
 
@@ -97,10 +125,13 @@ cathode_tab_view_new(CathodeConfig *cfg, GtkWindow *window)
     adw_tab_bar_set_view(bar, view);
     adw_toolbar_view_add_top_bar(toolbar, GTK_WIDGET(bar));
 
-    GtkWidget *child = GTK_WIDGET(view);
-    gtk_widget_set_hexpand(child, TRUE);
-    gtk_widget_set_vexpand(child, TRUE);
-    adw_toolbar_view_set_content(toolbar, child);
+    search_widget = cathode_search_bar_new(window);
+    adw_toolbar_view_add_top_bar(toolbar, search_widget);
+
+    GtkWidget *content = GTK_WIDGET(view);
+    gtk_widget_set_hexpand(content, TRUE);
+    gtk_widget_set_vexpand(content, TRUE);
+    adw_toolbar_view_set_content(toolbar, content);
 
     cathode_tab_new_tab();
 
@@ -110,18 +141,23 @@ cathode_tab_view_new(CathodeConfig *cfg, GtkWindow *window)
 void
 cathode_tab_new_tab(void)
 {
-    GtkWidget *content = create_tab_content();
-    adw_tab_view_append(st_view, content);
-
-    int n = adw_tab_view_get_n_pages(st_view);
-    AdwTabPage *page = adw_tab_view_get_nth_page(st_view, n - 1);
-    adw_tab_view_set_selected_page(st_view, page);
+    GtkWidget *content = create_tab();
+    adw_tab_view_append(view, content);
+    int n = adw_tab_view_get_n_pages(view);
+    AdwTabPage *page = adw_tab_view_get_nth_page(view, n - 1);
+    adw_tab_view_set_selected_page(view, page);
 }
 
 void
 cathode_tab_close_current(void)
 {
-    AdwTabPage *page = adw_tab_view_get_selected_page(st_view);
+    AdwTabPage *page = adw_tab_view_get_selected_page(view);
     if (page)
-        adw_tab_view_close_page(st_view, page);
+        adw_tab_view_close_page(view, page);
+}
+
+void
+cathode_tab_toggle_search(void)
+{
+    cathode_search_toggle(search_widget);
 }
