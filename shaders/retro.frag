@@ -46,6 +46,7 @@ vec2 barrel(vec2 uv, float k, out float dist_sq)
 void main()
 {
     vec2 uv   = v_tex;
+    uv.y      = 1.0 - uv.y; // Cairo→GL Y-axis flip
     vec2 frag = gl_FragCoord.xy;
     vec2 size = u_resolution;
 
