@@ -238,76 +238,28 @@ upload_retro(CathodeShaderState *st, int w, int h)
                 c->chromatic_aberration);
 }
 
+static void gl_check(const char *where);
+
 static gboolean
-render_cb(GtkGLArea *area, GdkGLContext *ctx, gpointer data)
+render_cb(GtkGLArea *area, GdkGLContext *_ctx, gpointer data)
 {
-    (void)ctx;
+    (void)_ctx;
+    (void)area;
     CathodeShaderState *st = data;
 
     if (!st->initialized) return FALSE;
 
-    capture_terminal(st);
+    /* flush pending errors */
+    while (glGetError() != GL_NO_ERROR) {}
 
-    if (st->width <= 0 || st->height <= 0) return FALSE;
+    glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
 
-    int fbo_w = st->width;
-    int fbo_h = st->height;
+    GLenum err = glGetError();
+    if (err != GL_NO_ERROR)
+        g_warning("TEST GL error in render_cb: 0x%x", err);
 
-    glBindVertexArray(st->vao);
-
-    bool do_bloom = st->cfg->bloom_strength > 0.001f &&
-                    st->cfg->bloom_sigma >= 0.5f;
-
-    if (do_bloom) {
-        glViewport(0, 0, fbo_w, fbo_h);
-
-        glUseProgram(st->program_blur);
-        glUniform1i(glGetUniformLocation(st->program_blur, "u_tex"), 0);
-        glUniform1f(glGetUniformLocation(st->program_blur, "u_sigma"),
-                    st->cfg->bloom_sigma);
-
-        glBindFramebuffer(GL_FRAMEBUFFER, st->fbo_blur_h);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, st->tex_terminal);
-        glUniform2f(glGetUniformLocation(st->program_blur, "u_direction"),
-                    1.0f, 0.0f);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-
-        glBindFramebuffer(GL_FRAMEBUFFER, st->fbo_blur_v);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, st->tex_blur_h);
-        glUniform2f(glGetUniformLocation(st->program_blur, "u_direction"),
-                    0.0f, 1.0f);
-        glDrawArrays(GL_TRIANGLES, 0, 6);
-
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-    }
-
-    int area_w = gtk_widget_get_width(GTK_WIDGET(area));
-    int area_h = gtk_widget_get_height(GTK_WIDGET(area));
-    if (area_w <= 0 || area_h <= 0) return FALSE;
-
-    glViewport(0, 0, area_w, area_h);
-
-    glUseProgram(st->program_retro);
-    upload_retro(st, fbo_w, fbo_h);
-
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, st->tex_terminal);
-
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D,
-                  do_bloom ? st->tex_blur_v : st->tex_terminal);
-
-    glDrawArrays(GL_TRIANGLES, 0, 6);
-
-    GLenum gl_err = glGetError();
-    if (gl_err != GL_NO_ERROR)
-        g_warning_once("GL error in render_cb: 0x%x", gl_err);
-
-    glBindVertexArray(0);
     glFlush();
-
     return TRUE;
 }
 
@@ -317,7 +269,15 @@ realize_cb(GtkGLArea *area, gpointer data)
     CathodeShaderState *st = data;
 
     gtk_gl_area_make_current(area);
-    if (gtk_gl_area_get_error(area)) return;
+    if (gtk_gl_area_get_error(area)) {
+        g_warning("GLArea realize error");
+        return;
+    }
+
+    const char *version = (const char *)glGetString(GL_VERSION);
+    const char *renderer = (const char *)glGetString(GL_RENDERER);
+    g_message("GL version: %s, renderer: %s", version ? version : "?",
+              renderer ? renderer : "?");
 
     char *vert = load_shader("retro.vert");
     char *frag_retro = load_shader("retro.frag");
@@ -404,6 +364,16 @@ on_redraw_idle(gpointer data)
     if (GTK_IS_WIDGET(st->gl_area))
         gtk_widget_queue_draw(GTK_WIDGET(st->gl_area));
     return G_SOURCE_REMOVE;
+}
+
+static void
+gl_check(const char *where)
+{
+    GLenum err = glGetError();
+    while (err != GL_NO_ERROR) {
+        g_warning("GL error at %s: 0x%x", where, err);
+        err = glGetError();
+    }
 }
 
 static void
