@@ -1,0 +1,96 @@
+[general]
+import = [
+    "~/.config/cathode/themes/{theme}.toml"
+]
+
+[terminal]
+scrollback = 2000
+
+# Cursor blink mode: "on", "off", or "system" (follow GTK settings)
+# Default: on
+cursor_blink = "on"
+
+[shell]
+program = "/bin/zsh"
+# args = []
+
+[env]
+TERM = "xterm-256color"
+
+[font]
+family = "monospace"
+# style = "Regular"
+size = 11
+
+# CRT retro effect configuration
+# Set any value to 0 to disable the corresponding effect
+[crt]
+# Intensity of scanline darkness (0.0 = none, 1.0 = full black)
+# Higher values make alternating pixel rows darker
+# Default: 0.06
+scanline_intensity = 0.06
+
+# Number of pixels per scanline group
+# Each group of N rows alternates between bright and dim
+# Default: 2.0
+scanline_period = 2.0
+
+# Bloom (glow around bright content) strength
+# Default: 0.12
+bloom_strength = 0.12
+
+# Bloom blur radius in pixels
+# Higher = wider glow, softer look
+# Default: 3.0
+bloom_sigma = 3.0
+
+# Phosphor glow strength on bright/saturated text
+# Default: 0.06
+glow_strength = 0.06
+
+# Phosphor glow brightness threshold — lower bound (0.0~1.0)
+# Pixels with luma below this get no glow effect.
+# Lower = more content glows (including dim text).
+# Default: 0.15
+glow_threshold_low = 0.15
+
+# Phosphor glow brightness threshold — upper bound (0.0~1.0)
+# Pixels with luma above this get full glow effect.
+# Lower = glow saturates at lower brightness.
+# Default: 0.6
+glow_threshold_high = 0.6
+
+# Aperture grille / shadow mask strength (0.0 = off, 0.005~0.03 = typical)
+# Simulates the vertical RGB stripe structure of Trinitron CRT tubes.
+# Higher values make the RGB pixel grid more visible.
+# Default: 0.012
+mask_strength = 0.012
+
+# Screen curvature (0.0 = flat, 0.01~0.08 = typical CRT bulge)
+# Simulates the spherical/cylindrical screen surface of old CRT monitors.
+# Applies a barrel distortion — edges curve inward.
+# Default: 0.0 (off)
+# curvature = 0.03
+
+# Chromatic aberration strength (0.0 = off, 0.005~0.01 = typical)
+# Simulates RGB beam convergence error at the screen edges.
+# Red and blue channels shift apart near the edges.
+# Default: 0.0 (off)
+# chromatic_aberration = 0.001
+
+[bindings]
+keys = [
+  { key = "C", with = "Control | alt", action = "Copy" },
+  { key = "V", with = "Control | alt", action = "Paste" },
+  { key = "PageUp", with = "alt", action = "ScrollPageUp" },
+  { key = "PageDown", with = "alt", action = "ScrollPageDown" },
+  { key = "Up", with = "alt", action = "ScrollUp" },
+  { key = "Down", with = "alt", action = "ScrollDown" },
+  { key = "Equal", with = "Control", action = "IncreaseFontSize" },
+  { key = "Minus", with = "Control", action = "DecreaseFontSize" },
+  { key = "Digit0", with = "Control | alt", action = "ResetFontSize" },
+  { key = "Enter", with = "Control | alt", action = "Toggle3DMode" },
+  { key = "M", with = "Control | alt", action = "ToggleMobiusMode" },
+  { key = "Up", with = "Control | alt", action = "IncreaseWarp" },
+  { key = "Down", with = "Control | alt", action = "DecreaseWarp" },
+]

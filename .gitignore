@@ -1,0 +1,8 @@
+/build/
+/subprojects/tomlc99*
+/subprojects/packagecache/
+.gcc-*
+.clang-*
+*.o
+*.so
+*.a
