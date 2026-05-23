@@ -10,12 +10,36 @@ static GtkWindow     *win;
 static GtkWidget     *search_widget;
 static AdwTabPage    *prev_page;
 
+static VteTerminal *
+get_terminal_from_page(AdwTabPage *page)
+{
+    GtkWidget *overlay = adw_tab_page_get_child(page);
+    GtkWidget *first = gtk_widget_get_first_child(overlay);
+    if (first && VTE_IS_TERMINAL(first))
+        return VTE_TERMINAL(first);
+    return NULL;
+}
+
+static void
+update_window_title(void)
+{
+    const char *title = NULL;
+    AdwTabPage *page = adw_tab_view_get_selected_page(view);
+    if (page) {
+        VteTerminal *term = get_terminal_from_page(page);
+        if (term)
+            title = vte_terminal_get_window_title(term);
+    }
+    gtk_window_set_title(win, title && *title ? title : "Cathode");
+}
+
 static void
 on_title_changed(VteTerminal *term, gpointer data)
 {
     const char *title = vte_terminal_get_window_title(term);
     adw_tab_page_set_title(ADW_TAB_PAGE(data),
                            title && *title ? title : "Cathode");
+    update_window_title();
 }
 
 static void
@@ -42,16 +66,6 @@ create_tab(void)
     GtkWidget *overlay = cathode_shader_overlay_new(cfg, term);
     cathode_terminal_spawn(VTE_TERMINAL(term), cfg);
     return overlay;
-}
-
-static VteTerminal *
-get_terminal_from_page(AdwTabPage *page)
-{
-    GtkWidget *overlay = adw_tab_page_get_child(page);
-    GtkWidget *first = gtk_widget_get_first_child(overlay);
-    if (first && VTE_IS_TERMINAL(first))
-        return VTE_TERMINAL(first);
-    return NULL;
 }
 
 static void
@@ -94,6 +108,8 @@ on_selected_page_changed(AdwTabView *v, GParamSpec *pspec, gpointer data)
             cfg->cursor_blink == CURSOR_BLINK_SYSTEM ? VTE_CURSOR_BLINK_SYSTEM :
             VTE_CURSOR_BLINK_ON);
     }
+
+    update_window_title();
 }
 
 GtkWidget *
@@ -135,6 +151,7 @@ cathode_tab_view_new(CathodeConfig *c, GtkWindow *window)
     adw_toolbar_view_set_content(toolbar, content);
 
     cathode_tab_new_tab();
+    update_window_title();
 
     return GTK_WIDGET(toolbar);
 }
