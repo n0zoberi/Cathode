@@ -7,6 +7,7 @@
 static CathodeConfig *cfg;
 static AdwTabView    *view;
 static GtkWindow     *win;
+static GtkLabel      *title_label;
 static GtkWidget     *search_widget;
 static AdwTabPage    *prev_page;
 
@@ -30,7 +31,10 @@ update_window_title(void)
         if (term)
             title = vte_terminal_get_window_title(term);
     }
-    gtk_window_set_title(win, title && *title ? title : "Cathode");
+    const char *final_title = title && *title ? title : "Cathode";
+    gtk_window_set_title(win, final_title);
+    if (title_label)
+        gtk_label_set_text(title_label, final_title);
 }
 
 static void
@@ -137,6 +141,22 @@ cathode_tab_view_new(CathodeConfig *c, GtkWindow *window)
                      G_CALLBACK(on_selected_page_changed), NULL);
 
     AdwToolbarView *toolbar = ADW_TOOLBAR_VIEW(adw_toolbar_view_new());
+
+    AdwHeaderBar *header = ADW_HEADER_BAR(adw_header_bar_new());
+    adw_header_bar_set_show_start_title_buttons(header, TRUE);
+    adw_header_bar_set_show_end_title_buttons(header, TRUE);
+
+    title_label = GTK_LABEL(gtk_label_new("Cathode"));
+    gtk_widget_add_css_class(GTK_WIDGET(title_label), "title");
+    adw_header_bar_set_title_widget(header, GTK_WIDGET(title_label));
+
+    GtkWidget *btn_new = gtk_button_new_from_icon_name("tab-new-symbolic");
+    gtk_widget_set_tooltip_text(btn_new, "New Tab");
+    g_signal_connect_swapped(btn_new, "clicked",
+                             G_CALLBACK(cathode_tab_new_tab), NULL);
+    adw_header_bar_pack_end(header, btn_new);
+
+    adw_toolbar_view_add_top_bar(toolbar, GTK_WIDGET(header));
 
     AdwTabBar *bar = ADW_TAB_BAR(adw_tab_bar_new());
     adw_tab_bar_set_view(bar, view);
