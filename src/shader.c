@@ -335,12 +335,50 @@ realize_cb(GtkGLArea *area, gpointer data)
     st->initialized = true;
 }
 
+static void
+unrealize_cb(GtkGLArea *area, gpointer data)
+{
+    CathodeShaderState *st = data;
+
+    if (st->redraw_idle_id) {
+        g_source_remove(st->redraw_idle_id);
+        st->redraw_idle_id = 0;
+    }
+
+    gtk_gl_area_make_current(area);
+    if (gtk_gl_area_get_error(area)) {
+        st->initialized = false;
+        return;
+    }
+
+    if (st->program_retro) glDeleteProgram(st->program_retro);
+    if (st->program_blur)  glDeleteProgram(st->program_blur);
+    if (st->vao)           glDeleteVertexArrays(1, &st->vao);
+    if (st->vbo)           glDeleteBuffers(1, &st->vbo);
+
+    st->program_retro = st->program_blur = 0;
+    st->vao = st->vbo = 0;
+
+    delete_fbos(st);
+    st->initialized = false;
+}
+
+static void
+shader_state_free(gpointer data)
+{
+    CathodeShaderState *st = data;
+    if (st->redraw_idle_id)
+        g_source_remove(st->redraw_idle_id);
+    g_free(st);
+}
+
 static gboolean
 on_redraw_idle(gpointer data)
 {
     CathodeShaderState *st = data;
     st->redraw_idle_id = 0;
-    gtk_widget_queue_draw(GTK_WIDGET(st->gl_area));
+    if (GTK_IS_WIDGET(st->gl_area))
+        gtk_widget_queue_draw(GTK_WIDGET(st->gl_area));
     return G_SOURCE_REMOVE;
 }
 
@@ -374,9 +412,10 @@ cathode_shader_overlay_new(CathodeConfig *cfg, GtkWidget *terminal)
     st->gl_area = GTK_GL_AREA(gl_widget);
 
     g_object_set_data_full(G_OBJECT(gl_widget), "cathode-shader",
-                           st, g_free);
+                           st, shader_state_free);
 
     g_signal_connect(gl_widget, "realize", G_CALLBACK(realize_cb), st);
+    g_signal_connect(gl_widget, "unrealize", G_CALLBACK(unrealize_cb), st);
     g_signal_connect(gl_widget, "render", G_CALLBACK(render_cb), st);
 
     g_signal_connect(terminal, "size-allocate",

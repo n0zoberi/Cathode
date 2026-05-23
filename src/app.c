@@ -99,18 +99,25 @@ on_reset_font(GSimpleAction *action, GVariant *param, gpointer data)
     cathode_tab_reapply_font(app_config);
 }
 
+static bool closing_confirmed = false;
+
 static void
 on_dialog_response(AdwAlertDialog *_dialog, const char *response, GtkWindow *window)
 {
     (void)_dialog;
-    if (g_strcmp0(response, "ok") == 0)
+    if (g_strcmp0(response, "ok") == 0) {
+        closing_confirmed = true;
         gtk_window_destroy(window);
+    }
 }
 
 static gboolean
 on_close_request(GtkWindow *window, gpointer data)
 {
     (void)data;
+
+    if (closing_confirmed)
+        return FALSE;
 
     int n = cathode_tab_get_n_pages();
     if (n <= 1)
@@ -137,11 +144,11 @@ on_close_request(GtkWindow *window, gpointer data)
 }
 
 static void
-on_window_destroy(GtkWindow *window, GtkApplication *app)
+on_window_destroy(GtkWindow *_window, GtkApplication *app)
 {
+    (void)_window;
     GList *windows = gtk_application_get_windows(app);
-    windows = g_list_remove(windows, window);
-    if (windows == NULL)
+    if (g_list_length(windows) <= 1)
         g_application_quit(G_APPLICATION(app));
 }
 

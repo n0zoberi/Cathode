@@ -165,16 +165,18 @@ merge_theme_table(toml_table_t *root, CathodeConfig *cfg)
 
     toml_datum_t val;
 
-    val = toml_string_in(colors, "foreground");
+    toml_table_t *primary = toml_table_in(colors, "primary");
+
+    val = toml_string_in(primary ? primary : colors, "foreground");
     if (val.ok) { set_str(&cfg->fg_color, val.u.s); free(val.u.s); }
 
-    val = toml_string_in(colors, "background");
+    val = toml_string_in(primary ? primary : colors, "background");
     if (val.ok) { set_str(&cfg->bg_color, val.u.s); free(val.u.s); }
 
-    val = toml_string_in(colors, "cursor");
+    val = toml_string_in(primary ? primary : colors, "cursor");
     if (val.ok) { set_str(&cfg->cursor_color, val.u.s); free(val.u.s); }
 
-    val = toml_string_in(colors, "selection_background");
+    val = toml_string_in(primary ? primary : colors, "selection_background");
     if (val.ok) { set_str(&cfg->selection_bg, val.u.s); free(val.u.s); }
 
     parse_colors_from_table(colors, cfg, "normal");
@@ -238,6 +240,7 @@ cathode_config_load(void)
 
     FILE *fp = fopen(config_path, "r");
     if (!fp) {
+        g_free((char *)config_path);
         g_message("No config at %s, using defaults", config_path);
         return cfg;
     }
@@ -247,6 +250,7 @@ cathode_config_load(void)
     fclose(fp);
 
     if (!root) {
+        g_free((char *)config_path);
         g_warning("Config parse error: %s", errbuf);
         return cfg;
     }
@@ -273,6 +277,7 @@ cathode_config_load(void)
         }
     }
 
+    g_free((char *)config_path);
     return cfg;
 }
 

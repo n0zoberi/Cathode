@@ -170,9 +170,11 @@ cathode_search_toggle(GtkWidget *widget)
         gtk_search_bar_set_search_mode(GTK_SEARCH_BAR(global_bar), FALSE);
         if (global_st && global_st->term)
             vte_terminal_search_set_regex(global_st->term, NULL, 0);
+        global_st = NULL;
     } else {
         gtk_search_bar_set_search_mode(GTK_SEARCH_BAR(global_bar), TRUE);
-        gtk_widget_grab_focus(GTK_WIDGET(global_st->entry));
+        if (global_st)
+            gtk_widget_grab_focus(GTK_WIDGET(global_st->entry));
     }
 }
 

@@ -47,11 +47,16 @@ cathode_terminal_apply_config(VteTerminal *term, CathodeConfig *cfg)
         vte_terminal_set_color_cursor(term, &rgba);
 
     if (cfg->palette_set) {
-        GdkRGBA palette_rgba[16];
+        GdkRGBA palette[16];
+        bool has_palette = false;
         for (int i = 0; i < 16; i++) {
-            if (cfg->palette[i] && gdk_rgba_parse(&palette_rgba[i], cfg->palette[i]))
-                vte_terminal_set_color_bold(term, &palette_rgba[i]);
+            if (cfg->palette[i] && gdk_rgba_parse(&palette[i], cfg->palette[i]))
+                has_palette = true;
+            else
+                palette[i] = (GdkRGBA){0, 0, 0, 1};
         }
+        if (has_palette)
+            vte_terminal_set_colors(term, NULL, NULL, palette, 16);
     }
 }
 

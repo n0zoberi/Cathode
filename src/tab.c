@@ -86,13 +86,14 @@ on_selected_page_changed(AdwTabView *v, GParamSpec *pspec, gpointer data)
 
     VteTerminal *term = get_terminal_from_page(page);
     cathode_search_set_terminal(search_widget, term);
-    gtk_widget_grab_focus(GTK_WIDGET(term));
 
-    if (term)
-        vte_terminal_set_cursor_blink_mode(term, cfg->cursor_blink == CURSOR_BLINK_OFF ?
-            VTE_CURSOR_BLINK_OFF :
-            cfg->cursor_blink == CURSOR_BLINK_SYSTEM ?
-            VTE_CURSOR_BLINK_SYSTEM : VTE_CURSOR_BLINK_ON);
+    if (term) {
+        gtk_widget_grab_focus(GTK_WIDGET(term));
+        vte_terminal_set_cursor_blink_mode(term,
+            cfg->cursor_blink == CURSOR_BLINK_OFF ? VTE_CURSOR_BLINK_OFF :
+            cfg->cursor_blink == CURSOR_BLINK_SYSTEM ? VTE_CURSOR_BLINK_SYSTEM :
+            VTE_CURSOR_BLINK_ON);
+    }
 }
 
 GtkWidget *
