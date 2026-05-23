@@ -4,6 +4,8 @@
 #include "terminal.h"
 
 static CathodeConfig *app_config = NULL;
+static GFileMonitor  *config_monitor = NULL;
+static guint          reload_debounce_id = 0;
 
 static VteTerminal *
 get_current_terminal(void)
@@ -216,10 +218,64 @@ on_activate(GtkApplication *app, gpointer user_data)
     gtk_window_present(GTK_WINDOW(window));
 }
 
+static gboolean
+reload_config_cb(gpointer data)
+{
+    (void)data;
+    reload_debounce_id = 0;
+    g_message("Config file changed, reloading...");
+    cathode_config_reload(app_config);
+    cathode_tab_reapply_config(app_config);
+    return G_SOURCE_REMOVE;
+}
+
+static void
+on_config_changed(GFileMonitor *monitor, GFile *file,
+                  GFile *other, GFileMonitorEvent event,
+                  gpointer data)
+{
+    (void)monitor;
+    (void)file;
+    (void)other;
+    (void)data;
+
+    if (event != G_FILE_MONITOR_EVENT_CHANGED &&
+        event != G_FILE_MONITOR_EVENT_CREATED)
+        return;
+
+    if (!app_config || !app_config->auto_reload)
+        return;
+
+    if (reload_debounce_id != 0)
+        g_source_remove(reload_debounce_id);
+    reload_debounce_id = g_timeout_add(500, reload_config_cb, NULL);
+}
+
+static void
+setup_config_monitor(void)
+{
+    const char *path = g_build_filename(
+        g_get_user_config_dir(), "cathode", "cathode.toml", NULL);
+    GFile *file = g_file_new_for_path(path);
+    g_free((char *)path);
+
+    GError *err = NULL;
+    config_monitor = g_file_monitor_file(file, G_FILE_MONITOR_NONE, NULL, &err);
+    if (err) {
+        g_warning("Cannot monitor config file: %s", err->message);
+        g_clear_error(&err);
+    } else {
+        g_signal_connect(config_monitor, "changed",
+                         G_CALLBACK(on_config_changed), NULL);
+    }
+    g_object_unref(file);
+}
+
 int
 cathode_app_run(int argc, char *argv[])
 {
     app_config = cathode_config_load();
+    setup_config_monitor();
 
     GtkApplication *app = gtk_application_new("org.cathode.Cathode",
         G_APPLICATION_DEFAULT_FLAGS);
@@ -228,6 +284,12 @@ cathode_app_run(int argc, char *argv[])
 
     int status = g_application_run(G_APPLICATION(app), argc, argv);
 
+    if (reload_debounce_id)
+        g_source_remove(reload_debounce_id);
+    if (config_monitor) {
+        g_file_monitor_cancel(config_monitor);
+        g_object_unref(config_monitor);
+    }
     cathode_config_free(app_config);
     g_object_unref(app);
     return status;

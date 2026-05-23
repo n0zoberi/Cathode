@@ -220,6 +220,21 @@ cathode_tab_reapply_font(CathodeConfig *c)
     }
 }
 
+void
+cathode_tab_reapply_config(CathodeConfig *c)
+{
+    int n = adw_tab_view_get_n_pages(view);
+    for (int i = 0; i < n; i++) {
+        AdwTabPage *page = adw_tab_view_get_nth_page(view, i);
+        GtkWidget *overlay = adw_tab_page_get_child(page);
+        VteTerminal *term = get_terminal_from_page(page);
+        if (!term) continue;
+
+        cathode_terminal_apply_config(term, c);
+        cathode_shader_refresh_visible(overlay);
+    }
+}
+
 int
 cathode_tab_get_n_pages(void)
 {
