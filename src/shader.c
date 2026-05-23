@@ -22,6 +22,7 @@ typedef struct {
     bool    initialized;
     bool    needs_redraw;
     guint   redraw_idle_id;
+    int     scale_factor;
 } CathodeShaderState;
 
 static const float quad_vertices[] = {
@@ -162,7 +163,11 @@ capture_terminal(CathodeShaderState *st)
     int h = gtk_widget_get_height(term);
     if (w <= 0 || h <= 0) return;
 
-    ensure_fbos(st, w, h);
+    int scale = st->scale_factor;
+    int tex_w = w * scale;
+    int tex_h = h * scale;
+
+    ensure_fbos(st, tex_w, tex_h);
 
     GtkWidget *parent = gtk_widget_get_parent(term);
     if (!parent) return;
@@ -276,7 +281,8 @@ render_cb(GtkGLArea *area, GdkGLContext *_ctx, gpointer data)
     int area_h = gtk_widget_get_height(GTK_WIDGET(area));
     if (area_w <= 0 || area_h <= 0) return FALSE;
 
-    glViewport(0, 0, area_w, area_h);
+    glViewport(0, 0, area_w * st->scale_factor,
+                     area_h * st->scale_factor);
     glBindVertexArray(st->vao);
 
     glUseProgram(st->program_retro);
@@ -446,6 +452,12 @@ cathode_shader_overlay_new(CathodeConfig *cfg, GtkWidget *terminal)
     CathodeShaderState *st = g_new0(CathodeShaderState, 1);
     st->cfg = cfg;
     st->terminal = terminal;
+    st->scale_factor = 1;
+
+    GdkSurface *sf = gtk_native_get_surface(
+        gtk_widget_get_native(terminal));
+    if (sf)
+        st->scale_factor = gdk_surface_get_scale_factor(sf);
 
     GtkWidget *gl_widget = gtk_gl_area_new();
     gtk_gl_area_set_allowed_apis(GTK_GL_AREA(gl_widget),
