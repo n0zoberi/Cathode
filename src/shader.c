@@ -11,11 +11,8 @@ typedef struct {
     GtkWidget     *overlay;
 
     GLuint  program_retro;
-    GLuint  program_blur;
     GLuint  vao, vbo;
 
-    GLuint  fbo_blur_h, fbo_blur_v;
-    GLuint  tex_blur_h, tex_blur_v;
     GLuint  tex_terminal;
 
     int     width, height;
@@ -96,44 +93,15 @@ load_shader(const char *name)
 }
 
 static void
-create_fbo(GLuint *fbo, GLuint *tex, int w, int h)
+delete_tex(CathodeShaderState *st)
 {
-    glGenTextures(1, tex);
-    glBindTexture(GL_TEXTURE_2D, *tex);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA,
-                 GL_UNSIGNED_BYTE, NULL);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-    glGenFramebuffers(1, fbo);
-    glBindFramebuffer(GL_FRAMEBUFFER, *fbo);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-                           GL_TEXTURE_2D, *tex, 0);
-
-    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-    if (status != GL_FRAMEBUFFER_COMPLETE)
-        g_warning("FBO incomplete: 0x%x (w=%d h=%d)", status, w, h);
-
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-}
-
-static void
-delete_fbos(CathodeShaderState *st)
-{
-    if (st->tex_blur_h)   glDeleteTextures(1, &st->tex_blur_h);
-    if (st->tex_blur_v)   glDeleteTextures(1, &st->tex_blur_v);
     if (st->tex_terminal) glDeleteTextures(1, &st->tex_terminal);
-    if (st->fbo_blur_h)   glDeleteFramebuffers(1, &st->fbo_blur_h);
-    if (st->fbo_blur_v)   glDeleteFramebuffers(1, &st->fbo_blur_v);
-    st->tex_blur_h = st->tex_blur_v = st->tex_terminal = 0;
-    st->fbo_blur_h = st->fbo_blur_v = 0;
+    st->tex_terminal = 0;
     st->width = st->height = 0;
 }
 
 static void
-ensure_fbos(CathodeShaderState *st, int w, int h)
+ensure_tex(CathodeShaderState *st, int w, int h)
 {
     if (w == st->width && h == st->height)
         return;
@@ -162,7 +130,7 @@ capture_terminal(CathodeShaderState *st)
     int h = gtk_widget_get_height(term);
     if (w <= 0 || h <= 0) return;
 
-    ensure_fbos(st, w, h);
+    ensure_tex(st, w, h);
 
     GtkWidget *parent = gtk_widget_get_parent(term);
     if (!parent) return;
@@ -202,7 +170,6 @@ upload_retro(CathodeShaderState *st, int w, int h)
     GLuint p = st->program_retro;
 
     glUniform1i(glGetUniformLocation(p, "u_terminal"), 0);
-    glUniform1i(glGetUniformLocation(p, "u_bloom_tex"), 1);
     glUniform1f(glGetUniformLocation(p, "u_time"),
                 (float)g_get_monotonic_time() / 1e6f);
     glUniform2f(glGetUniformLocation(p, "u_resolution"), (float)w, (float)h);
@@ -224,6 +191,8 @@ upload_retro(CathodeShaderState *st, int w, int h)
                 c->scanline_period);
     glUniform1f(glGetUniformLocation(p, "u_bloom_strength"),
                 c->bloom_strength);
+    glUniform1f(glGetUniformLocation(p, "u_bloom_sigma"),
+                c->bloom_sigma);
     glUniform1f(glGetUniformLocation(p, "u_glow_strength"),
                 c->glow_strength);
     glUniform1f(glGetUniformLocation(p, "u_glow_threshold_low"),
@@ -236,6 +205,14 @@ upload_retro(CathodeShaderState *st, int w, int h)
                 c->curvature);
     glUniform1f(glGetUniformLocation(p, "u_chromatic_aberration"),
                 c->chromatic_aberration);
+    glUniform1f(glGetUniformLocation(p, "u_softening"),
+                c->softening);
+    glUniform1f(glGetUniformLocation(p, "u_color_bleed"),
+                c->color_bleed);
+    glUniform1f(glGetUniformLocation(p, "u_rounding"),
+                c->rounding);
+    glUniform1f(glGetUniformLocation(p, "u_shadow_strength"),
+                c->shadow_strength);
 }
 
 static void gl_check(const char *where);
@@ -255,13 +232,6 @@ render_cb(GtkGLArea *area, GdkGLContext *_ctx, gpointer data)
 
     if (st->width <= 0 || st->height <= 0) return FALSE;
 
-    int fbo_w = st->width;
-    int fbo_h = st->height;
-
-    /* bloom FBOs disabled — skip to avoid GLES FBO issues */
-    bool do_bloom = false;
-    (void)do_bloom;
-
     int area_w = gtk_widget_get_width(GTK_WIDGET(area));
     int area_h = gtk_widget_get_height(GTK_WIDGET(area));
     if (area_w <= 0 || area_h <= 0) return FALSE;
@@ -273,12 +243,9 @@ render_cb(GtkGLArea *area, GdkGLContext *_ctx, gpointer data)
     glBindVertexArray(st->vao);
 
     glUseProgram(st->program_retro);
-    upload_retro(st, fbo_w, fbo_h);
+    upload_retro(st, st->width, st->height);
 
     glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, st->tex_terminal);
-
-    glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_2D, st->tex_terminal);
 
     glDrawArrays(GL_TRIANGLES, 0, 6);
@@ -310,24 +277,20 @@ realize_cb(GtkGLArea *area, gpointer data)
               renderer ? renderer : "?");
 
     char *vert = load_shader("retro.vert");
-    char *frag_retro = load_shader("retro.frag");
-    char *frag_blur = load_shader("blur.frag");
+    char *frag = load_shader("retro.frag");
 
-    if (!vert || !frag_retro || !frag_blur) {
+    if (!vert || !frag) {
         g_free(vert);
-        g_free(frag_retro);
-        g_free(frag_blur);
+        g_free(frag);
         return;
     }
 
-    st->program_retro = link_program(vert, frag_retro);
-    st->program_blur  = link_program(vert, frag_blur);
+    st->program_retro = link_program(vert, frag);
 
     g_free(vert);
-    g_free(frag_retro);
-    g_free(frag_blur);
+    g_free(frag);
 
-    if (!st->program_retro || !st->program_blur)
+    if (!st->program_retro)
         return;
 
     glGenVertexArrays(1, &st->vao);
@@ -366,14 +329,13 @@ unrealize_cb(GtkGLArea *area, gpointer data)
     }
 
     if (st->program_retro) glDeleteProgram(st->program_retro);
-    if (st->program_blur)  glDeleteProgram(st->program_blur);
     if (st->vao)           glDeleteVertexArrays(1, &st->vao);
     if (st->vbo)           glDeleteBuffers(1, &st->vbo);
 
-    st->program_retro = st->program_blur = 0;
+    st->program_retro = 0;
     st->vao = st->vbo = 0;
 
-    delete_fbos(st);
+    delete_tex(st);
     st->initialized = false;
 }
 
@@ -476,12 +438,16 @@ cathode_shader_overlay_new(CathodeConfig *cfg, GtkWidget *terminal)
 bool
 cathode_shader_is_effect_active(CathodeConfig *cfg)
 {
-    return cfg->scanline_intensity  > 0.001f ||
-           cfg->bloom_strength      > 0.001f ||
-           cfg->glow_strength       > 0.001f ||
-           cfg->mask_strength       > 0.0001f ||
-           cfg->curvature           > 0.0001f ||
-           cfg->chromatic_aberration > 0.00001f;
+    return cfg->scanline_intensity   > 0.001f ||
+           cfg->bloom_strength       > 0.001f ||
+           cfg->glow_strength        > 0.001f ||
+           cfg->mask_strength        > 0.0001f ||
+           cfg->curvature            > 0.0001f ||
+           cfg->chromatic_aberration > 0.00001f ||
+           cfg->softening            > 0.001f ||
+           cfg->color_bleed          > 0.001f ||
+           cfg->rounding             > 0.001f ||
+           cfg->shadow_strength      > 0.001f;
 }
 
 void
@@ -497,5 +463,26 @@ cathode_shader_queue_redraw(GtkWidget *overlay)
         child = gtk_widget_get_next_sibling(child);
     }
     if (st)
+        queue_redraw_idle(st);
+}
+
+void
+cathode_shader_refresh_visible(GtkWidget *overlay)
+{
+    CathodeShaderState *st = NULL;
+    GtkWidget *child = gtk_widget_get_first_child(overlay);
+    while (child) {
+        if (GTK_IS_GL_AREA(child)) {
+            st = g_object_get_data(G_OBJECT(child), "cathode-shader");
+            break;
+        }
+        child = gtk_widget_get_next_sibling(child);
+    }
+    if (!st) return;
+
+    bool active = cathode_shader_is_effect_active(st->cfg);
+    gtk_widget_set_visible(GTK_WIDGET(st->gl_area), active);
+
+    if (active)
         queue_redraw_idle(st);
 }

@@ -70,6 +70,18 @@ parse_crt(toml_table_t *root, CathodeConfig *cfg)
 
     d = toml_double_in(t, "chromatic_aberration");
     if (d.ok) cfg->chromatic_aberration = (float)d.u.d;
+
+    d = toml_double_in(t, "softening");
+    if (d.ok) cfg->softening = (float)d.u.d;
+
+    d = toml_double_in(t, "color_bleed");
+    if (d.ok) cfg->color_bleed = (float)d.u.d;
+
+    d = toml_double_in(t, "rounding");
+    if (d.ok) cfg->rounding = (float)d.u.d;
+
+    d = toml_double_in(t, "shadow_strength");
+    if (d.ok) cfg->shadow_strength = (float)d.u.d;
 }
 
 static void
@@ -139,6 +151,9 @@ parse_imports(toml_table_t *root, CathodeConfig *cfg)
     toml_table_t *general = toml_table_in(root, "general");
     if (!general) return;
 
+    toml_datum_t d = toml_bool_in(general, "auto_reload");
+    if (d.ok) cfg->auto_reload = d.u.b;
+
     toml_array_t *arr = toml_array_in(general, "import");
     if (!arr) return;
 
@@ -203,6 +218,11 @@ cathode_config_default(void)
     cfg->mask_strength       = 0.012f;
     cfg->curvature           = 0.0f;
     cfg->chromatic_aberration = 0.0f;
+    cfg->softening           = 0.12f;
+    cfg->color_bleed         = 0.08f;
+    cfg->rounding            = 0.15f;
+    cfg->shadow_strength     = 0.10f;
+    cfg->auto_reload         = true;
     cfg->fg_color            = g_strdup("#ffffff");
     cfg->bg_color            = g_strdup("#000000");
     return cfg;
@@ -279,6 +299,45 @@ cathode_config_load(void)
 
     g_free((char *)config_path);
     return cfg;
+}
+
+void
+cathode_config_reload(CathodeConfig *cfg)
+{
+    CathodeConfig *fresh = cathode_config_load();
+
+    cfg->scrollback        = fresh->scrollback;
+    cfg->cursor_blink      = fresh->cursor_blink;
+    cfg->font_size         = fresh->font_size;
+    cfg->auto_reload       = fresh->auto_reload;
+
+    cfg->scanline_intensity  = fresh->scanline_intensity;
+    cfg->scanline_period     = fresh->scanline_period;
+    cfg->bloom_strength      = fresh->bloom_strength;
+    cfg->bloom_sigma         = fresh->bloom_sigma;
+    cfg->glow_strength       = fresh->glow_strength;
+    cfg->glow_threshold_low  = fresh->glow_threshold_low;
+    cfg->glow_threshold_high = fresh->glow_threshold_high;
+    cfg->mask_strength       = fresh->mask_strength;
+    cfg->curvature           = fresh->curvature;
+    cfg->chromatic_aberration = fresh->chromatic_aberration;
+    cfg->softening           = fresh->softening;
+    cfg->color_bleed         = fresh->color_bleed;
+    cfg->rounding            = fresh->rounding;
+    cfg->shadow_strength     = fresh->shadow_strength;
+
+    set_str(&cfg->font_family,   fresh->font_family);
+    set_str(&cfg->font_style,    fresh->font_style);
+    set_str(&cfg->fg_color,      fresh->fg_color);
+    set_str(&cfg->bg_color,      fresh->bg_color);
+    set_str(&cfg->cursor_color,  fresh->cursor_color);
+    set_str(&cfg->selection_bg,  fresh->selection_bg);
+
+    for (int i = 0; i < 16; i++)
+        set_str(&cfg->palette[i], fresh->palette[i]);
+    cfg->palette_set = fresh->palette_set;
+
+    cathode_config_free(fresh);
 }
 
 void

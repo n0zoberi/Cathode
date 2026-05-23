@@ -35,11 +35,17 @@ typedef struct {
     float mask_strength;
     float curvature;
     float chromatic_aberration;
+    float softening;
+    float color_bleed;
+    float rounding;
+    float shadow_strength;
 
     char  *fg_color;
     char  *bg_color;
     char  *cursor_color;
     char  *selection_bg;
+    bool   auto_reload;
+
     char  *palette[16];
     bool   palette_set;
 } CathodeConfig;
@@ -47,4 +53,5 @@ typedef struct {
 CathodeConfig *cathode_config_load(void);
 CathodeConfig *cathode_config_default(void);
 void           cathode_config_free(CathodeConfig *cfg);
+void           cathode_config_reload(CathodeConfig *cfg);
 void           cathode_config_merge_theme(CathodeConfig *cfg, const char *theme_path);
