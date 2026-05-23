@@ -292,9 +292,6 @@ realize_cb(GtkGLArea *area, gpointer data)
     gtk_gl_area_make_current(area);
     if (gtk_gl_area_get_error(area)) return;
 
-    gtk_gl_area_set_allowed_apis(area, GDK_GL_API_GLES);
-    gtk_gl_area_set_required_version(area, 3, 0);
-
     char *vert = load_shader("retro.vert");
     char *frag_retro = load_shader("retro.frag");
     char *frag_blur = load_shader("blur.frag");
@@ -405,6 +402,8 @@ cathode_shader_overlay_new(CathodeConfig *cfg, GtkWidget *terminal)
     st->terminal = terminal;
 
     GtkWidget *gl_widget = gtk_gl_area_new();
+    gtk_gl_area_set_allowed_apis(GTK_GL_AREA(gl_widget), GDK_GL_API_GLES);
+    gtk_gl_area_set_required_version(GTK_GL_AREA(gl_widget), 3, 0);
     gtk_widget_set_can_target(gl_widget, FALSE);
     gtk_widget_set_halign(gl_widget, GTK_ALIGN_FILL);
     gtk_widget_set_valign(gl_widget, GTK_ALIGN_FILL);
@@ -418,8 +417,6 @@ cathode_shader_overlay_new(CathodeConfig *cfg, GtkWidget *terminal)
     g_signal_connect(gl_widget, "unrealize", G_CALLBACK(unrealize_cb), st);
     g_signal_connect(gl_widget, "render", G_CALLBACK(render_cb), st);
 
-    g_signal_connect(terminal, "size-allocate",
-                     G_CALLBACK(queue_redraw_idle), st);
     g_signal_connect(terminal, "contents-changed",
                      G_CALLBACK(on_term_changed), st);
 

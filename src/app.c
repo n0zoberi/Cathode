@@ -205,7 +205,8 @@ on_activate(GtkApplication *app, gpointer user_data)
 
     GtkWidget *tab_content = cathode_tab_view_new(app_config,
                                                    GTK_WINDOW(window));
-    gtk_window_set_child(GTK_WINDOW(window), tab_content);
+    adw_application_window_set_content(ADW_APPLICATION_WINDOW(window),
+                                        tab_content);
 
     g_signal_connect(window, "close-request",
                      G_CALLBACK(on_close_request), NULL);
