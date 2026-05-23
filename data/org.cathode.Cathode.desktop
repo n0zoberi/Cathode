@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Cathode
+Comment=A retro CRT terminal emulator
+Comment[zh_CN]=复古CRT终端模拟器
+Exec=cathode
+Icon=org.cathode.Cathode
+Categories=System;TerminalEmulator;
+Keywords=terminal;crt;retro;shader;
+StartupNotify=true
+Terminal=false
