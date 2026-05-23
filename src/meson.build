@@ -4,6 +4,7 @@ cathode_sources = [
   'terminal.c',
   'config.c',
   'shader.c',
+  'tab.c',
   'vendor/tomlc99/toml.c',
 ]
 
