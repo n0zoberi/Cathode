@@ -3,10 +3,13 @@ cathode_sources = [
   'app.c',
   'terminal.c',
   'config.c',
+  'shader.c',
   'vendor/tomlc99/toml.c',
 ]
 
 cathode_include = include_directories('.')
+
+cairo_dep = dependency('cairo', version: '>= 1.16')
 
 cathode_deps = [
   gtk4_dep,
@@ -14,6 +17,7 @@ cathode_deps = [
   vte_dep,
   epoxy_dep,
   glib_dep,
+  cairo_dep,
 ]
 
 gnome = import('gnome')
