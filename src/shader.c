@@ -178,6 +178,17 @@ capture_terminal(CathodeShaderState *st)
     gsk_render_node_unref(node);
 
     cairo_surface_flush(cs);
+
+    /* diagnostic: save one frame to PNG */
+    static bool saved = false;
+    if (!saved) {
+        int save_stride = cairo_image_surface_get_stride(cs);
+        cairo_surface_write_to_png(cs, "/tmp/cathode_capture.png");
+        g_message("Saved capture to /tmp/cathode_capture.png (%dx%d stride=%d)",
+                  w, h, save_stride);
+        saved = true;
+    }
+
     unsigned char *data = cairo_image_surface_get_data(cs);
     int stride = cairo_image_surface_get_stride(cs);
 
