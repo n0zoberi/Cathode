@@ -2,7 +2,11 @@ cathode_sources = [
   'main.c',
   'app.c',
   'terminal.c',
+  'config.c',
+  'vendor/tomlc99/toml.c',
 ]
+
+cathode_include = include_directories('.')
 
 cathode_deps = [
   gtk4_dep,
@@ -21,8 +25,11 @@ cathode_resources = gnome.compile_resources(
 )
 
 executable('cathode',
-  cathode_sources + cathode_resources,
+  cathode_sources,
+  cathode_resources,
+  include_directories: cathode_include,
   dependencies: cathode_deps,
+  c_args: ['-Wno-pedantic'],
   install: true,
   install_dir: get_option('bindir'),
 )
