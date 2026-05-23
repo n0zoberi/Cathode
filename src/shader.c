@@ -150,6 +150,8 @@ ensure_fbos(CathodeShaderState *st, int w, int h)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_R, GL_BLUE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_B, GL_RED);
 }
 
 static void
@@ -178,15 +180,6 @@ capture_terminal(CathodeShaderState *st)
     cairo_surface_flush(cs);
     unsigned char *data = cairo_image_surface_get_data(cs);
     int stride = cairo_image_surface_get_stride(cs);
-
-    for (int y = 0; y < h; y++) {
-        unsigned char *row = data + (gsize)y * stride;
-        for (int x = 0; x < w; x++) {
-            unsigned char tmp = row[x * 4 + 0];
-            row[x * 4 + 0] = row[x * 4 + 2];
-            row[x * 4 + 2] = tmp;
-        }
-    }
 
     glPixelStorei(GL_UNPACK_ROW_LENGTH, stride / 4);
     glBindTexture(GL_TEXTURE_2D, st->tex_terminal);
