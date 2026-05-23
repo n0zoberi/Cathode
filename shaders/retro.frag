@@ -17,7 +17,6 @@ uniform vec4      u_background;
 uniform float u_scanline_intensity;   // 0 = off, 0.06 = default
 uniform float u_scanline_period;      // rows per scanline group, default 2.0
 uniform float u_bloom_strength;       // 0 = off, 0.12 = default
-uniform float u_bloom_sigma;          // blur radius in pixels, default 3.0
 uniform float u_glow_strength;        // 0 = off, 0.06 = default
 uniform float u_glow_threshold_low;   // luma below this = no glow, default 0.15
 uniform float u_glow_threshold_high;  // luma above this = full glow, default 0.6

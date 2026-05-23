@@ -111,6 +111,11 @@ create_fbo(GLuint *fbo, GLuint *tex, int w, int h)
     glBindFramebuffer(GL_FRAMEBUFFER, *fbo);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
                            GL_TEXTURE_2D, *tex, 0);
+
+    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    if (status != GL_FRAMEBUFFER_COMPLETE)
+        g_warning("FBO incomplete: 0x%x (w=%d h=%d)", status, w, h);
+
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
@@ -171,10 +176,28 @@ capture_terminal(CathodeShaderState *st)
     gsk_render_node_unref(node);
 
     cairo_surface_flush(cs);
+    unsigned char *data = cairo_image_surface_get_data(cs);
+    int stride = cairo_image_surface_get_stride(cs);
+
+    for (int y = 0; y < h; y++) {
+        unsigned char *row = data + (gsize)y * stride;
+        for (int x = 0; x < w; x++) {
+            unsigned char tmp = row[x * 4 + 0];
+            row[x * 4 + 0] = row[x * 4 + 2];
+            row[x * 4 + 2] = tmp;
+        }
+    }
+
+    glPixelStorei(GL_UNPACK_ROW_LENGTH, stride / 4);
     glBindTexture(GL_TEXTURE_2D, st->tex_terminal);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h,
-                    GL_BGRA, GL_UNSIGNED_BYTE,
-                    cairo_image_surface_get_data(cs));
+                    GL_RGBA, GL_UNSIGNED_BYTE, data);
+    glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+
+    GLenum err = glGetError();
+    if (err != GL_NO_ERROR)
+        g_warning("GL error in capture_terminal: 0x%x", err);
+
     cairo_surface_destroy(cs);
 }
 
@@ -207,8 +230,6 @@ upload_retro(CathodeShaderState *st, int w, int h)
                 c->scanline_period);
     glUniform1f(glGetUniformLocation(p, "u_bloom_strength"),
                 c->bloom_strength);
-    glUniform1f(glGetUniformLocation(p, "u_bloom_sigma"),
-                c->bloom_sigma);
     glUniform1f(glGetUniformLocation(p, "u_glow_strength"),
                 c->glow_strength);
     glUniform1f(glGetUniformLocation(p, "u_glow_threshold_low"),
@@ -277,6 +298,10 @@ render_cb(GtkGLArea *area, GdkGLContext *ctx, gpointer data)
                   do_bloom ? st->tex_blur_v : st->tex_terminal);
 
     glDrawArrays(GL_TRIANGLES, 0, 6);
+
+    GLenum gl_err = glGetError();
+    if (gl_err != GL_NO_ERROR)
+        g_warning_once("GL error in render_cb: 0x%x", gl_err);
 
     glBindVertexArray(0);
     glFlush();
@@ -402,8 +427,9 @@ cathode_shader_overlay_new(CathodeConfig *cfg, GtkWidget *terminal)
     st->terminal = terminal;
 
     GtkWidget *gl_widget = gtk_gl_area_new();
-    gtk_gl_area_set_allowed_apis(GTK_GL_AREA(gl_widget), GDK_GL_API_GLES);
-    gtk_gl_area_set_required_version(GTK_GL_AREA(gl_widget), 3, 0);
+    gtk_gl_area_set_allowed_apis(GTK_GL_AREA(gl_widget),
+                                  GDK_GL_API_GL | GDK_GL_API_GLES);
+    gtk_gl_area_set_required_version(GTK_GL_AREA(gl_widget), 3, 2);
     gtk_widget_set_can_target(gl_widget, FALSE);
     gtk_widget_set_halign(gl_widget, GTK_ALIGN_FILL);
     gtk_widget_set_valign(gl_widget, GTK_ALIGN_FILL);
