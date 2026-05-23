@@ -151,10 +151,11 @@ cathode_tab_view_new(CathodeConfig *c, GtkWindow *window)
     adw_header_bar_set_title_widget(header, GTK_WIDGET(title_label));
 
     GtkWidget *btn_new = gtk_button_new_from_icon_name("tab-new-symbolic");
+    gtk_button_set_has_frame(GTK_BUTTON(btn_new), FALSE);
     gtk_widget_set_tooltip_text(btn_new, "New Tab");
     g_signal_connect_swapped(btn_new, "clicked",
                              G_CALLBACK(cathode_tab_new_tab), NULL);
-    adw_header_bar_pack_end(header, btn_new);
+    adw_header_bar_pack_start(header, btn_new);
 
     adw_toolbar_view_add_top_bar(toolbar, GTK_WIDGET(header));
 
