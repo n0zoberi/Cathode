@@ -249,15 +249,17 @@ render_cb(GtkGLArea *area, GdkGLContext *_ctx, gpointer data)
 
     if (!st->initialized) return FALSE;
 
-    /* flush pending errors */
     while (glGetError() != GL_NO_ERROR) {}
 
-    glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
+    capture_terminal(st);
+
+    glClearColor(1.0f, 0.0f, 1.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
     GLenum err = glGetError();
     if (err != GL_NO_ERROR)
-        g_warning("TEST GL error in render_cb: 0x%x", err);
+        g_warning("STEP1 GL error: 0x%x (w=%d h=%d)", err,
+                  st->width, st->height);
 
     glFlush();
     return TRUE;
