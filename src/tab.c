@@ -161,3 +161,32 @@ cathode_tab_toggle_search(void)
 {
     cathode_search_toggle(search_widget);
 }
+
+void
+cathode_tab_reapply_font(CathodeConfig *c)
+{
+    int n = adw_tab_view_get_n_pages(view);
+    for (int i = 0; i < n; i++) {
+        AdwTabPage *page = adw_tab_view_get_nth_page(view, i);
+        VteTerminal *term = get_terminal_from_page(page);
+        if (!term) continue;
+
+        char *str = g_strdup_printf("%s %d", c->font_family, c->font_size);
+        PangoFontDescription *font = pango_font_description_from_string(str);
+        vte_terminal_set_font(term, font);
+        pango_font_description_free(font);
+        g_free(str);
+    }
+}
+
+int
+cathode_tab_get_n_pages(void)
+{
+    return adw_tab_view_get_n_pages(view);
+}
+
+AdwTabPage *
+cathode_tab_get_selected_page(void)
+{
+    return adw_tab_view_get_selected_page(view);
+}
