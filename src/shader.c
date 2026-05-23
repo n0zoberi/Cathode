@@ -158,6 +158,7 @@ static void
 capture_terminal(CathodeShaderState *st)
 {
     GtkWidget *term = st->terminal;
+    if (!GTK_IS_WIDGET(term)) return;
     int w = gtk_widget_get_width(term);
     int h = gtk_widget_get_height(term);
     if (w <= 0 || h <= 0) return;
@@ -245,19 +246,21 @@ render_cb(GtkGLArea *area, GdkGLContext *ctx, gpointer data)
 
     if (!st->initialized) return FALSE;
 
-    int w = gtk_widget_get_width(GTK_WIDGET(area));
-    int h = gtk_widget_get_height(GTK_WIDGET(area));
-    if (w <= 0 || h <= 0) return FALSE;
-
     capture_terminal(st);
 
-    glViewport(0, 0, w, h);
+    if (st->width <= 0 || st->height <= 0) return FALSE;
+
+    int fbo_w = st->width;
+    int fbo_h = st->height;
+
     glBindVertexArray(st->vao);
 
     bool do_bloom = st->cfg->bloom_strength > 0.001f &&
                     st->cfg->bloom_sigma >= 0.5f;
 
     if (do_bloom) {
+        glViewport(0, 0, fbo_w, fbo_h);
+
         glUseProgram(st->program_blur);
         glUniform1i(glGetUniformLocation(st->program_blur, "u_tex"), 0);
         glUniform1f(glGetUniformLocation(st->program_blur, "u_sigma"),
@@ -280,8 +283,14 @@ render_cb(GtkGLArea *area, GdkGLContext *ctx, gpointer data)
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
 
+    int area_w = gtk_widget_get_width(GTK_WIDGET(area));
+    int area_h = gtk_widget_get_height(GTK_WIDGET(area));
+    if (area_w <= 0 || area_h <= 0) return FALSE;
+
+    glViewport(0, 0, area_w, area_h);
+
     glUseProgram(st->program_retro);
-    upload_retro(st, w, h);
+    upload_retro(st, fbo_w, fbo_h);
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, st->tex_terminal);
@@ -412,6 +421,18 @@ on_term_changed(VteTerminal *term, gpointer data)
     queue_redraw_idle(data);
 }
 
+static void
+on_term_destroy(GtkWidget *_term, gpointer data)
+{
+    (void)_term;
+    CathodeShaderState *st = data;
+    st->terminal = NULL;
+    if (st->redraw_idle_id) {
+        g_source_remove(st->redraw_idle_id);
+        st->redraw_idle_id = 0;
+    }
+}
+
 GtkWidget *
 cathode_shader_overlay_new(CathodeConfig *cfg, GtkWidget *terminal)
 {
@@ -438,6 +459,8 @@ cathode_shader_overlay_new(CathodeConfig *cfg, GtkWidget *terminal)
 
     g_signal_connect(terminal, "contents-changed",
                      G_CALLBACK(on_term_changed), st);
+    g_signal_connect(terminal, "destroy",
+                     G_CALLBACK(on_term_destroy), st);
 
     GtkWidget *overlay = gtk_overlay_new();
     gtk_overlay_set_child(GTK_OVERLAY(overlay), terminal);

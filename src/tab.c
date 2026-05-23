@@ -51,7 +51,9 @@ on_child_exited(VteTerminal *term, int status, gpointer data)
 {
     (void)term;
     (void)status;
-    adw_tab_view_close_page(view, ADW_TAB_PAGE(data));
+    AdwTabPage *page = ADW_TAB_PAGE(data);
+    if (adw_tab_page_get_child(page))
+        adw_tab_view_close_page(view, page);
 }
 
 static void
