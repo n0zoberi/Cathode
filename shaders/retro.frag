@@ -154,7 +154,5 @@ void main()
     // ---- CRT warm white point (~6500 K) ----
     col.rgb *= vec3(1.025, 1.0, 0.95);
 
-    /* diagnostic: raw passthrough */
-    frag_color = vec4(texture(u_terminal, uv).rgb, 1.0);
-    /* frag_color = vec4(col, 1.0); */
+    frag_color = vec4(col, 1.0);
 }
