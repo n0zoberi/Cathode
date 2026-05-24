@@ -19,6 +19,7 @@ typedef struct {
     bool    initialized;
     bool    needs_redraw;
     guint   redraw_idle_id;
+    guint   tick_id;
 } CathodeShaderState;
 
 static const float quad_vertices[] = {
@@ -262,6 +263,16 @@ render_cb(GtkGLArea *area, GdkGLContext *_ctx, gpointer data)
     return TRUE;
 }
 
+static gboolean
+on_frame_tick(GtkWidget *widget, GdkFrameClock *clock, gpointer data)
+{
+    (void)clock;
+    CathodeShaderState *st = data;
+    if (st->initialized && gtk_widget_get_visible(widget))
+        gtk_widget_queue_draw(widget);
+    return G_SOURCE_CONTINUE;
+}
+
 static void
 realize_cb(GtkGLArea *area, gpointer data)
 {
@@ -312,6 +323,9 @@ realize_cb(GtkGLArea *area, gpointer data)
 
     glBindVertexArray(0);
     st->initialized = true;
+
+    st->tick_id = gtk_widget_add_tick_callback(GTK_WIDGET(area),
+        on_frame_tick, st, NULL);
 }
 
 static void
@@ -322,6 +336,11 @@ unrealize_cb(GtkGLArea *area, gpointer data)
     if (st->redraw_idle_id) {
         g_source_remove(st->redraw_idle_id);
         st->redraw_idle_id = 0;
+    }
+
+    if (st->tick_id) {
+        gtk_widget_remove_tick_callback(GTK_WIDGET(area), st->tick_id);
+        st->tick_id = 0;
     }
 
     gtk_gl_area_make_current(area);
