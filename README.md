@@ -1,6 +1,6 @@
 # Cathode — CRT Terminal Emulator
 
-A GTK4/libadwaita terminal emulator with a retro CRT scanline shader, tabs, search, and TOML configuration.
+A GTK4/libadwaita terminal emulator with a retro CRT scanline shader.
 
 ## Features
 
@@ -13,7 +13,6 @@ A GTK4/libadwaita terminal emulator with a retro CRT scanline shader, tabs, sear
 - **Header bar menu** — copy, paste, search, new/close/rename tab, clear screen, reset terminal, open config, quit
 - **Config auto-reload** — GFileMonitor watches `cathode.toml`, applies changes on save
 - **TOML config** — themes, fonts, shell, CRT parameters all configurable with sensible defaults
-- **i18n / gettext** — Chinese (Simplified) translation built-in, English source
 
 ## Build
 
@@ -47,37 +46,9 @@ Installs:
 - Icons → `$prefix/share/icons/hicolor/` (16×16 to 512×512)
 - Sample config + theme → `$prefix/share/cathode/`
 
-### Arch Linux (PKGBUILD)
+## Config
 
-```bash
-cd dist/arch
-makepkg -si
-```
-
-## Config (`~/.config/cathode/cathode.toml`)
-
-```toml
-[general]
-import = ["~/.config/cathode/themes/dracula.toml"]
-auto_reload = true
-
-[terminal]
-scrollback = 2000
-cursor_blink = "on"
-
-[shell]
-program = "/bin/zsh"
-
-[font]
-family = "monospace"
-size = 11
-
-[crt]
-scanline_intensity = 0.06
-bloom_strength = 0.05
-glow_strength = 0.2
-mask_strength = 0.012
-```
+See `cathode.sample.toml` for the full reference, or copy it to `~/.config/cathode/cathode.toml` to get started.
 
 ### CRT Parameters
 
@@ -104,29 +75,30 @@ mask_strength = 0.012
 
 Set any value to `0` to disable that effect. All CRT params at `0` → GLArea hidden, zero overhead.
 
-Auto-reload: edit and save `cathode.toml` — changes apply immediately. Set `auto_reload = false` to require restart.
-
 ### Theme Format
 
-Supports two formats via `[general].import`:
+Imported theme files use the `[colors]` table. Primary colors can be placed directly under `[colors]` or nested in `[colors.primary]`:
 
 ```toml
-# Format 1: Flat section (main config)
-[theme]
-foreground = "#426644"
-background = "#0f191c"
+[colors]
+foreground = "#ffffff"
+background = "#000000"
 
-[theme.normal]
-color0 = "#0f191c"
-# ...
-
-# Format 2: Nested section (separate theme.toml)
 [colors.primary]
-foreground = "#426644"
-background = "#0f191c"
+foreground = "#ffffff"
+background = "#000000"
+cursor = "#ffffff"
+selection_background = "#aaaaaa"
 
 [colors.normal]
-color0 = "#0f191c"
+color0 = "#000000"
+color1 = "#aa0000"
+# color2–color7
+
+[colors.bright]
+color8 = "#555555"
+color9 = "#ff5555"
+# color10–color15
 ```
 
 ## Keyboard Shortcuts
@@ -144,40 +116,14 @@ color0 = "#0f191c"
 | Ctrl+Tab / Ctrl+PgDown | Next tab |
 | Ctrl+Shift+Tab / Ctrl+PgUp | Prev tab |
 
-## Mouse
-
-- Left click → focus terminal
-- Middle click → paste primary selection
-- Scroll → scrollback history
-
-## i18n / Localization
-
-Source strings are in English, wrapped with `_()` for gettext. Chinese (Simplified) translation is built-in.
-
-```bash
-# Test with Chinese locale (without install)
-msgfmt po/zh_CN.po -o cathode.mo
-mkdir -p ~/.local/share/locale/zh_CN/LC_MESSAGES
-cp cathode.mo ~/.local/share/locale/zh_CN/LC_MESSAGES/cathode.mo
-LANGUAGE=zh_CN ./build/src/cathode
-```
-
-See `AGENTS.md` for the full i18n workflow.
-
-## Architecture
-
-```
-GtkOverlay
-  ├── VteTerminal (base child)
-  └── GtkGLArea (CRT shader overlay)
-```
-
-The terminal is snapshotted via GTK's scene graph to a Cairo surface, uploaded to an OpenGL texture, then processed by a single-pass CRT fragment shader. GLArea is transparent when all CRT effects are disabled.
-
 ## License
 
 MIT. TOML parser: [tomlc99](https://github.com/cktan/tomlc99) (MIT).
 
 ## Acknowledgments
 
-Several CRT effect concepts (burn-in, jitter, flickering, glowing line) were inspired by [cool-retro-term](https://github.com/Swordfish90/cool-retro-term) (GPL-3.0). All implementation is original to this project.
+Several CRT effect concepts were inspired by:
+- [Retro.hlsl](https://github.com/microsoft/terminal) from Windows Terminal — scanlines, bloom, curvature, chromatic aberration, aperture grille, vignetting.
+- [cool-retro-term](https://github.com/Swordfish90/cool-retro-term) (GPL-3.0) — burn-in, jitter, flickering, glowing line.
+
+All implementation is original to this project.

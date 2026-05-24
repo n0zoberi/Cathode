@@ -32,7 +32,3 @@ install_subdir('data/icons/hicolor',
 install_data('cathode.sample.toml',
   install_dir: get_option('datadir') / 'cathode',
 )
-
-install_data('theme.toml',
-  install_dir: get_option('datadir') / 'cathode',
-)

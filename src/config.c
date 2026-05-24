@@ -185,10 +185,7 @@ static void
 merge_theme_table(toml_table_t *root, CathodeConfig *cfg)
 {
     toml_table_t *colors = toml_table_in(root, "colors");
-    if (!colors) {
-        colors = toml_table_in(root, "theme");
-        if (!colors) return;
-    }
+    if (!colors) return;
 
     toml_datum_t val;
 
