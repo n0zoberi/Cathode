@@ -86,7 +86,7 @@ link_program(const char *vert_src, const char *frag_src)
 static char *
 load_shader(const char *name)
 {
-    char *path = g_strdup_printf("/org/cathode/Cathode/shaders/%s", name);
+    char *path = g_strdup_printf("/com/n0zoberi/Cathode/shaders/%s", name);
     GBytes *b = g_resources_lookup_data(path, G_RESOURCE_LOOKUP_FLAGS_NONE, NULL);
     g_free(path);
     if (!b) {

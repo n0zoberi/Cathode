@@ -62,9 +62,9 @@
 
 ## Phase 9: CRT Shader Overhaul ✅
 
-- **Inline bloom** — 2D gaussian kernel sampled from terminal texture, no FBO
-  - Replaces disabled FBO pipeline, fixes `GL_INVALID_FRAMEBUFFER_OPERATION` on GLES
-  - Adjustable spread via `bloom_sigma`, luminance-gated via `smoothstep`
+- **Inline bloom** — 2D gaussian kernel sampled from terminal texture
+  - `bloom_strength` controls global screen brightness uniformly across the entire frame
+  - Adjustable spread via `bloom_sigma`
 - **Edge softening** — 3×3 gaussian softening of pixel edges
 - **Color bleed** — asymmetric horizontal luminance-dependent color smearing
 - **Pixel rounding** — 2D gaussian beam spot simulating circular CRT beams
@@ -95,7 +95,7 @@
 - Fixed `AdwApplicationWindow` → `adw_application_window_set_content()`
 - Fixed config_path memory leak
 - Added GL error diagnostics (`glCheckFramebufferStatus`, `glGetError`)
-- Fixed bloom FBO → replaced with inline single-pass bloom
+- Fixed bloom FBO → replaced with inline single-pass bloom → global brightness boost
 
 ## Phase 11: CRT Effects Refinement ✅
 

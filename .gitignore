@@ -6,3 +6,22 @@
 *.o
 *.so
 *.a
+
+# makepkg build artifacts
+dist/arch/src/
+dist/arch/pkg/
+dist/arch/*.pkg.tar.zst
+dist/arch/*.pkg.tar.zst.sig
+
+# internal development docs (not part of source)
+PLAN.md
+AGENTS.md
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# macOS
+.DS_Store

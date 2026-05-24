@@ -172,12 +172,14 @@ void main()
         col.b   += glow.b * u_glow_strength * 0.35;
     }
 
-    // ---- Inline bloom (gaussian kernel, luminance-gated, no FBO needed) ----
+    // ---- Inline bloom (global brightness boost, no gating) ----
+    // bloom_strength directly controls overall screen brightness.
+    // A uniform multiplier lifts the entire frame while the blurred
+    // bloom texture adds soft glow — no luminance gating or text-specific logic.
     if (u_bloom_strength > 0.001) {
         float sigma = max(u_bloom_sigma, 1.0);
         int spread = int(ceil(sigma * 2.0));
-        if (spread < 2) spread = 2;
-        if (spread > 8) spread = 8;
+        spread = clamp(spread, 2, 12);
 
         vec3 bloom_sum = vec3(0.0);
         float total = 0.0;
@@ -190,10 +192,13 @@ void main()
                 total += w;
             }
         }
-        vec3 bloom = bloom_sum / total;
-        float lum = luma(bloom);
-        float gating = smoothstep(0.15, 0.5, lum);
-        col.rgb += bloom * u_bloom_strength * gating;
+        vec3 bloom = bloom_sum / max(total, 0.001);
+
+        // Uniform brightness boost across the entire screen
+        col.rgb *= (1.0 + u_bloom_strength * 3.0);
+
+        // Additive glow from blurred content
+        col.rgb += bloom * u_bloom_strength * 2.0;
     }
 
     // ---- Burn-in / phosphor persistence ----

@@ -1,0 +1,76 @@
+# Chinese (Simplified) translations for Cathode.
+# Copyright (C) 2026 Cathode authors
+# This file is distributed under the same license as the cathode package.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: cathode 0.1.0\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-05-24 00:00+0800\n"
+"PO-Revision-Date: 2026-05-24 00:00+0800\n"
+"Last-Translator: \n"
+"Language-Team: Chinese (Simplified)\n"
+"Language: zh_CN\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: src/tab.c
+msgid "New Tab"
+msgstr "新建标签页"
+
+#: src/tab.c
+msgid "Menu"
+msgstr "菜单"
+
+#: src/tab.c
+msgid "Copy"
+msgstr "复制"
+
+#: src/tab.c
+msgid "Paste"
+msgstr "粘贴"
+
+#: src/tab.c
+msgid "Search"
+msgstr "搜索"
+
+#: src/tab.c
+msgid "Close Tab"
+msgstr "关闭标签页"
+
+#: src/tab.c
+msgid "Rename Tab"
+msgstr "更改标签页标题"
+
+#: src/tab.c src/app.c
+msgid "Cancel"
+msgstr "取消"
+
+#: src/tab.c
+msgid "OK"
+msgstr "确定"
+
+#: src/tab.c
+msgid "Clear Screen"
+msgstr "清除屏幕"
+
+#: src/tab.c
+msgid "Reset Terminal"
+msgstr "重置终端"
+
+#: src/tab.c
+msgid "Open Config File"
+msgstr "打开配置文件"
+
+#: src/tab.c
+msgid "Quit"
+msgstr "退出"
+
+#: src/app.c
+msgid "Close Cathode?"
+msgstr "关闭 Cathode？"
+
+#: src/app.c
+msgid "Close All"
+msgstr "全部关闭"

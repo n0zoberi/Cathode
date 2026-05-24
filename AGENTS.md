@@ -20,8 +20,8 @@ meson install -C build
 ```
 
 - Binary → `$prefix/bin/cathode`
-- Desktop entry → `$prefix/share/applications/org.cathode.Cathode.desktop`
-- Icon → `$prefix/share/icons/hicolor/256x256/apps/org.cathode.Cathode.png`
+- Desktop entry → `$prefix/share/applications/com.n0zoberi.Cathode.desktop`
+- Icon → `$prefix/share/icons/hicolor/` (16×16 至 512×512, 自动适配)
 - Sample config + theme → `$prefix/share/cathode/`
 
 ## Dependencies
@@ -79,7 +79,7 @@ GtkOverlay
    - Color bleed (asymmetric horizontal smear)
    - Scanlines (gaussian beam-spot profile)
    - Phosphor glow (P22 warm tone, spatial gaussian halo)
-   - Inline bloom (gaussian kernel, luminance-gated, no FBO)
+   - Inline bloom (global screen brightness boost)
    - Burn-in (CPU-side temporal frame accumulation)
    - Glowing line (slowly scrolling bright scanline)
    - Aperture grille (RGB vertical stripe mask)
@@ -103,7 +103,7 @@ GtkOverlay
 - **GLES + Desktop GL** — `gtk_gl_area_set_allowed_apis(GL|GLES)`, version 3.2
 - **`GL_RGBA` + texture swizzle** — avoids `GL_BGRA` incompatibility with strict GLES
 - **Cairo stride handling** — `glPixelStorei(GL_UNPACK_ROW_LENGTH, stride/4)` for padded rows
-- **Inline bloom (no FBO)** — avoids GLES framebuffer issues; bloom computed directly in `retro.frag` by sampling the terminal texture with a gaussian kernel
+- **Inline bloom** — bloom computed directly in `retro.frag` by sampling the terminal texture with a gaussian kernel; `bloom_strength` controls global screen brightness uniformly across the entire frame
 - **Tab lifecycle** — `child-exited` auto-closes tab; `destroy` signal nulls terminal pointer
 - **Window close confirm** — AdwAlertDialog when multiple tabs open, `closing_confirmed` flag prevents infinite loop
 - **Config file monitor** — `GFileMonitor` + 500ms debounce watches `cathode.toml`; changes re-parse and re-apply to all tabs without restart
@@ -129,7 +129,7 @@ GtkOverlay
 |---|---|---|---|---|
 | `u_scanline_intensity` | `scanline_intensity` | float | 0.06 |
 | `u_scanline_period` | `scanline_period` | int | 6 |
-| `u_bloom_strength` | `bloom_strength` | float | 0.20 |
+| `u_bloom_strength` | `bloom_strength` | float | 0.05 |
 | `u_bloom_sigma` | `bloom_sigma` | float | 4.5 |
 | `u_glow_strength` | `glow_strength` | float | 0.2 |
 | `u_glow_threshold_low` | `glow_threshold_low` | float | 0.15 |
@@ -153,7 +153,7 @@ See `cathode.sample.toml` for full documentation. Effects enabled by default:
 | Effect | Uniform | Default | Description |
 |---|---|---|---|
 | Scanlines | `u_scanline_intensity` | 0.06 | Gaussian beam-spot profile |
-| Inline bloom | `u_bloom_strength` | 0.20 | Luminance-gated gaussian glow |
+| Inline bloom | `u_bloom_strength` | 0.05 | Global screen brightness + soft glow |
 | Phosphor glow | `u_glow_strength` | 0.2 | P22 warm spatial halo |
 | Aperture grille | `u_mask_strength` | 0.012 | RGB vertical stripe mask |
 | Edge softening | `u_softening` | 0.12 | 3x3 gaussian edge blur |
@@ -170,17 +170,76 @@ See `cathode.sample.toml` for full documentation. Effects enabled by default:
 When making changes to the codebase, use conventional commit prefixes:
 
 | Prefix | Use for |
-|---|---|
+|---|---|---|
 | `feat:` | New features (effects, config options, monitor) |
 | `fix:` | Bug fixes |
 | `refactor:` | Code restructuring without behavior change |
 | `shader:` | GLSL shader changes |
+| `i18n:` | Translation updates (po files, string changes) |
 | `docs:` | README, PLAN, AGENTS, sample.toml comments |
 | `build:` | Meson, dependencies, resource files |
 
-Example: `shader: replace FBO bloom with inline single-pass gaussian`
+Example: `shader: replace luminance-gated bloom with global brightness boost`
 
 Keep commits **atomic** — one logical change per commit. Write messages in English, present tense, imperative mood.
+
+## i18n / Localization
+
+Cathode uses **gettext** via GLib's i18n layer (`<glib/gi18n.h>`) for user-visible strings.
+Source strings are in **English**, wrapped with `_()`.
+Chinese (Simplified) translations live in `po/zh_CN.po`.
+
+### Workflow: When you add or change a user-visible string
+
+1. **Wrap the new string in `_()`** in the source code (C files).
+2. **Update `po/zh_CN.po`** — either manually add the new msgid/msgstr pair,
+   or regenerate with:
+   ```bash
+   cd po && touch POTFILES && xgettext --from-code=UTF-8 \
+     --package-name=cathode --package-version=0.1.0 \
+     -c -o - ../src/*.c | msgmerge -U zh_CN.po -
+   ```
+3. **Verify** the `.po` file is valid:
+   ```bash
+   msgfmt -c po/zh_CN.po -o /dev/null
+   ```
+4. **Build and install** to see the effect:
+   ```bash
+   meson compile -C build && meson install -C build
+   ```
+5. **Test** with Chinese locale:
+   ```bash
+   LANGUAGE=zh_CN ./build/src/cathode
+   ```
+
+### Testing without install
+
+Compile the `.mo` manually and place it where gettext can find it:
+
+```bash
+msgfmt po/zh_CN.po -o cathode.mo
+mkdir -p ~/.local/share/locale/zh_CN/LC_MESSAGES
+cp cathode.mo ~/.local/share/locale/zh_CN/LC_MESSAGES/cathode.mo
+LANGUAGE=zh_CN ./build/src/cathode
+```
+
+### Git commit rules
+
+- Use prefix **`i18n:`** for translation-only changes (`.po` file updates,
+  string rewrapping, new translations).
+- If a feature commit also changes translatable strings, include the `.po`
+  update in the same commit or a follow-up `i18n:` commit.
+- See the [Git Commits](#git-commits) section above for all prefixes.
+
+### Important notes
+
+- **Every user-facing string** must be wrapped in `_()` — even if no
+  translation exists yet, the macro is a no-op when no `.mo` is found.
+- **Do NOT** use `_()` for non-translatable strings (debug output,
+  internal error messages, command-line options).
+- The source `.po` file (`zh_CN.po`) uses English `msgid` and Chinese `msgstr`.
+  For other locales, create a new `po/<lang>.po` file and add it to
+  `po/LINGUAS`.
 
 ## Known Issues
 

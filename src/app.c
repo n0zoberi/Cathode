@@ -2,6 +2,7 @@
 #include "config.h"
 #include "tab.h"
 #include "terminal.h"
+#include <glib/gi18n.h>
 
 static CathodeConfig *app_config = NULL;
 static GFileMonitor  *config_monitor = NULL;
@@ -70,6 +71,61 @@ on_toggle_search(GSimpleAction *action, GVariant *param, gpointer data)
 }
 
 static void
+on_rename_tab(GSimpleAction *action, GVariant *param, gpointer data)
+{
+    (void)action;
+    (void)param;
+    (void)data;
+    cathode_tab_rename_current();
+}
+
+static void
+on_clear_screen(GSimpleAction *action, GVariant *param, gpointer data)
+{
+    (void)action;
+    (void)param;
+    (void)data;
+    VteTerminal *term = get_current_terminal();
+    if (term)
+        vte_terminal_reset(term, TRUE, FALSE);
+}
+
+static void
+on_reset_terminal(GSimpleAction *action, GVariant *param, gpointer data)
+{
+    (void)action;
+    (void)param;
+    (void)data;
+    VteTerminal *term = get_current_terminal();
+    if (term)
+        vte_terminal_reset(term, TRUE, TRUE);
+}
+
+static void
+on_open_config(GSimpleAction *action, GVariant *param, gpointer data)
+{
+    (void)action;
+    (void)param;
+    (void)data;
+    GtkWindow *window = GTK_WINDOW(data);
+    char *path = g_build_filename(g_get_user_config_dir(), "cathode", "cathode.toml", NULL);
+    GFile *file = g_file_new_for_path(path);
+    GtkFileLauncher *launcher = gtk_file_launcher_new(file);
+    gtk_file_launcher_launch(launcher, window, NULL, NULL, NULL);
+    g_object_unref(launcher);
+    g_object_unref(file);
+    g_free(path);
+}
+
+static void
+on_quit(GSimpleAction *action, GVariant *param, gpointer data)
+{
+    (void)action;
+    (void)param;
+    gtk_window_close(GTK_WINDOW(data));
+}
+
+static void
 on_increase_font(GSimpleAction *action, GVariant *param, gpointer data)
 {
     (void)action;
@@ -127,12 +183,12 @@ on_close_request(GtkWindow *window, gpointer data)
 
     char *body = g_strdup_printf("There are %d open tabs. Close anyway?", n);
     AdwAlertDialog *dialog = ADW_ALERT_DIALOG(
-        adw_alert_dialog_new("Close Cathode?", body));
+        adw_alert_dialog_new(_("Close Cathode?"), body));
     g_free(body);
 
     adw_alert_dialog_add_responses(dialog,
-        "cancel", "Cancel",
-        "ok", "Close All",
+        "cancel", _("Cancel"),
+        "ok", _("Close All"),
         NULL);
     adw_alert_dialog_set_default_response(dialog, "cancel");
     adw_alert_dialog_set_close_response(dialog, "cancel");
@@ -172,6 +228,11 @@ on_activate(GtkApplication *app, gpointer user_data)
         { "increase-font", on_increase_font, NULL, NULL, NULL, {0} },
         { "decrease-font", on_decrease_font, NULL, NULL, NULL, {0} },
         { "reset-font", on_reset_font, NULL, NULL, NULL, {0} },
+        { "rename-tab", on_rename_tab, NULL, NULL, NULL, {0} },
+        { "clear-screen", on_clear_screen, NULL, NULL, NULL, {0} },
+        { "reset-terminal", on_reset_terminal, NULL, NULL, NULL, {0} },
+        { "open-config", on_open_config, NULL, NULL, NULL, {0} },
+        { "quit", on_quit, NULL, NULL, NULL, {0} },
     };
     g_action_map_add_action_entries(G_ACTION_MAP(window),
                                      win_entries,
@@ -277,7 +338,7 @@ cathode_app_run(int argc, char *argv[])
     app_config = cathode_config_load();
     setup_config_monitor();
 
-    GtkApplication *app = gtk_application_new("org.cathode.Cathode",
+    GtkApplication *app = gtk_application_new("com.n0zoberi.Cathode",
         G_APPLICATION_DEFAULT_FLAGS);
 
     g_signal_connect(app, "activate", G_CALLBACK(on_activate), NULL);

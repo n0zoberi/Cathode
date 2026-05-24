@@ -15,15 +15,18 @@ vte_dep        = dependency('vte-2.91-gtk4', version: '>= 0.74')
 epoxy_dep      = dependency('epoxy',      version: '>= 1.5')
 glib_dep       = dependency('glib-2.0',   version: '>= 2.76')
 
-subdir('src')
+add_project_arguments('-DGETTEXT_PACKAGE="cathode"', language: 'c')
+add_project_arguments('-DLOCALEDIR="' + get_option('prefix') / get_option('localedir') + '"', language: 'c')
 
-install_data('data/org.cathode.Cathode.desktop',
+subdir('src')
+subdir('po')
+
+install_data('data/com.n0zoberi.Cathode.desktop',
   install_dir: get_option('datadir') / 'applications',
 )
 
-install_data('icon.png',
-  rename: 'org.cathode.Cathode.png',
-  install_dir: get_option('datadir') / 'icons/hicolor/256x256/apps',
+install_subdir('data/icons/hicolor',
+  install_dir: get_option('datadir') / 'icons',
 )
 
 install_data('cathode.sample.toml',

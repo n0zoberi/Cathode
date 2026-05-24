@@ -42,9 +42,10 @@ scanline_intensity = 0.12
 # Default: 6.0
 scanline_period = 6.0
 
-# Bloom (glow around bright content) strength
-# Default: 0.20
-bloom_strength = 0.20
+# Bloom — global screen brightness boost
+# Higher values = brighter display with soft glow.
+# Default: 0.05
+bloom_strength = 0.05
 
 # Bloom blur radius in pixels
 # Higher = wider glow, softer look

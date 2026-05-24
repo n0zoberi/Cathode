@@ -1,0 +1,29 @@
+# Maintainer: Your Name <your.email@example.com>
+
+pkgname=cathode
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='A retro CRT terminal emulator with scanline shader'
+arch=('x86_64')
+url='https://github.com/n0zoberi/cathode'
+license=('MIT')
+depends=(
+  'gtk4'
+  'libadwaita'
+  'vte4'
+  'libepoxy'
+  'cairo'
+  'glib2'
+)
+makedepends=('meson' 'ninja' 'pkgconf')
+source=("$pkgname-$pkgver.tar.gz::$url/archive/v$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+build() {
+  arch-meson "$pkgname-$pkgver" build
+  meson compile -C build
+}
+
+package() {
+  DESTDIR="$pkgdir" meson install -C build
+}

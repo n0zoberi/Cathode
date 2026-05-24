@@ -4,51 +4,62 @@ A GTK4/libadwaita terminal emulator with a retro CRT scanline shader, tabs, sear
 
 ## Features
 
-- **CRT retro effect pipeline** — 12 configurable effects with uniform control:
-  - Scanlines (gaussian beam-spot profile)
-  - Phosphor glow (P22 warm tone, blue ZnS:Ag emphasis)
-  - Inline bloom (gaussian glow, no FBO overhead)
-  - Aperture grille (RGB vertical stripe mask)
-  - Edge softening (sub-pixel gaussian)
-  - Color bleed (horizontal phosphor trail)
-  - Pixel rounding (2D circular beam spot)
-  - Depth shadows (bezel + inner shadow)
-  - Burn-in (phosphor persistence with temporal accumulation)
-  - Jitter (electron beam analog instability)
-  - Flickering (power supply ripple)
-  - Glowing line (horizontal scanline bleed)
+- **CRT retro effect pipeline** — 12 configurable effects:
+  - Scanlines, phosphor glow, inline bloom, aperture grille, edge softening, color bleed
+  - Pixel rounding, depth shadows, burn-in, jitter, flickering, glowing line
   - Curvature + chromatic aberration + vignetting + film grain + warm white point
 - **Multiple tabs** — AdwTabView + AdwTabBar with keyboard shortcuts
 - **Search** — Ctrl+Shift+F with VTE regex, Enter/Shift+Enter navigation
+- **Header bar menu** — copy, paste, search, new/close/rename tab, clear screen, reset terminal, open config, quit
 - **Config auto-reload** — GFileMonitor watches `cathode.toml`, applies changes on save
 - **TOML config** — themes, fonts, shell, CRT parameters all configurable with sensible defaults
-- **Header bar** — window title follows terminal, new-tab button
-
-## Screenshot
-
-*CRT effects active: scanlines + phosphor glow + aperture grille on a green-on-dark theme*
+- **i18n / gettext** — Chinese (Simplified) translation built-in, English source
 
 ## Build
 
-```bash
-# Dependencies
-sudo pacman -S gtk4 libadwaita vte3 epoxy cairo meson
+### Dependencies
 
-# Build
+- gtk4 >= 4.12
+- libadwaita-1 >= 1.4
+- vte-2.91-gtk4 >= 0.74
+- epoxy >= 1.5
+- cairo >= 1.16
+- glib-2.0 >= 2.76
+- meson >= 1.0.0
+
+### Compile & Run
+
+```bash
 meson setup build
 meson compile -C build
 ./build/src/cathode
+```
 
-# Install (optional)
+### Install
+
+```bash
 meson install -C build
 ```
 
-## Config (~/.config/cathode/cathode.toml)
+Installs:
+- Binary → `$prefix/bin/cathode`
+- Desktop entry → `$prefix/share/applications/com.n0zoberi.Cathode.desktop`
+- Icons → `$prefix/share/icons/hicolor/` (16×16 to 512×512)
+- Sample config + theme → `$prefix/share/cathode/`
+
+### Arch Linux (PKGBUILD)
+
+```bash
+cd dist/arch
+makepkg -si
+```
+
+## Config (`~/.config/cathode/cathode.toml`)
 
 ```toml
 [general]
 import = ["~/.config/cathode/themes/dracula.toml"]
-auto_reload = true       # watch config file for changes
+auto_reload = true
 
 [terminal]
 scrollback = 2000
@@ -63,48 +74,37 @@ size = 11
 
 [crt]
 scanline_intensity = 0.06
-scanline_period = 6
-bloom_strength = 0.12
-bloom_sigma = 2.5
-glow_strength = 0.06
-glow_threshold_low = 0.15
-glow_threshold_high = 0.6
+bloom_strength = 0.05
+glow_strength = 0.2
 mask_strength = 0.012
-curvature = 0.0
-chromatic_aberration = 0.0
-softening = 0.12
-color_bleed = 0.08
-rounding = 0.15
-shadow_strength = 0.10
 ```
 
 ### CRT Parameters
 
 | Key | Default | Description |
-|-----|---------|-------------|
+|---|---|---|
 | `scanline_intensity` | `0.06` | Scanline darkness (0=off, 1=black) |
 | `scanline_period` | `6` | Pixel rows per scanline group |
-| `bloom_strength` | `0.12` | Bloom glow intensity around bright content |
-| `bloom_sigma` | `2.5` | Bloom blur radius (kernel spread) |
-| `glow_strength` | `0.06` | Phosphor glow on bright text |
+| `bloom_strength` | `0.05` | Global screen brightness boost |
+| `bloom_sigma` | `4.5` | Bloom blur radius |
+| `glow_strength` | `0.2` | Phosphor glow on bright text |
 | `glow_threshold_low` | `0.15` | Min luma for glow effect |
 | `glow_threshold_high` | `0.6` | Luma threshold for full glow |
 | `mask_strength` | `0.012` | Aperture grille stripe visibility |
-| `curvature` | `0.0` | Barrel distortion (0.01–0.08 typical) |
+| `curvature` | `0.0` | Barrel distortion |
 | `chromatic_aberration` | `0.0` | RGB separation at edges |
-| `softening` | `0.12` | Edge softening (sub-pixel gaussian) |
-| `color_bleed` | `0.08` | Horizontal color smear (phosphor trail) |
-| `rounding` | `0.15` | Pixel roundness (2D beam spot) |
+| `softening` | `0.12` | Edge softening |
+| `color_bleed` | `0.08` | Horizontal color smear |
+| `rounding` | `0.15` | Pixel roundness |
 | `shadow_strength` | `0.10` | Bezel + inner depth shadow |
-| `burn_in` | `0.0` | Phosphor persistence (afterimage trail, 0.0–0.2) |
-| `jitter` | `0.0` | Electron beam jitter (analog instability, 0–0.01) |
-| `flickering` | `0.0` | Power supply ripple brightness modulation (0–0.3) |
-| `glowing_line` | `0.0` | Scrolling bright horizontal scanline (0–0.5) |
+| `burn_in` | `0.0` | Phosphor persistence |
+| `jitter` | `0.0` | Electron beam jitter |
+| `flickering` | `0.0` | Brightness ripple |
+| `glowing_line` | `0.0` | Scrolling bright scanline |
 
 Set any value to `0` to disable that effect. All CRT params at `0` → GLArea hidden, zero overhead.
 
-**Auto-reload:** Edit and save `cathode.toml` — changes apply immediately to all open tabs.
-Set `auto_reload = false` in `[general]` to require a restart.
+Auto-reload: edit and save `cathode.toml` — changes apply immediately. Set `auto_reload = false` to require restart.
 
 ### Theme Format
 
@@ -115,34 +115,24 @@ Supports two formats via `[general].import`:
 [theme]
 foreground = "#426644"
 background = "#0f191c"
-cursor = "#384545"
 
 [theme.normal]
 color0 = "#0f191c"
-# ... color1–color7
+# ...
 
-[theme.bright]
-color8 = "#688060"
-# ... color9–color15
-
-# Format 2: Nested section (theme.toml)
+# Format 2: Nested section (separate theme.toml)
 [colors.primary]
 foreground = "#426644"
 background = "#0f191c"
-cursor = "#384545"
 
 [colors.normal]
 color0 = "#0f191c"
-# ...
-[colors.bright]
-color8 = "#688060"
-# ...
 ```
 
 ## Keyboard Shortcuts
 
 | Shortcut | Action |
-|----------|--------|
+|---|---|
 | Ctrl+Shift+T | New tab |
 | Ctrl+Shift+W | Close tab |
 | Ctrl+Shift+F | Toggle search |
@@ -160,6 +150,20 @@ color8 = "#688060"
 - Middle click → paste primary selection
 - Scroll → scrollback history
 
+## i18n / Localization
+
+Source strings are in English, wrapped with `_()` for gettext. Chinese (Simplified) translation is built-in.
+
+```bash
+# Test with Chinese locale (without install)
+msgfmt po/zh_CN.po -o cathode.mo
+mkdir -p ~/.local/share/locale/zh_CN/LC_MESSAGES
+cp cathode.mo ~/.local/share/locale/zh_CN/LC_MESSAGES/cathode.mo
+LANGUAGE=zh_CN ./build/src/cathode
+```
+
+See `AGENTS.md` for the full i18n workflow.
+
 ## Architecture
 
 ```
@@ -168,23 +172,12 @@ GtkOverlay
   └── GtkGLArea (CRT shader overlay)
 ```
 
-Terminal is snapshotted via GTK's scene graph to a Cairo surface, uploaded to an OpenGL
-texture, then processed by a single-pass CRT fragment shader with 14 configurable effects.
-GLArea is transparent when all CRT effects are disabled.
-
-Bloom uses an inline gaussian kernel (no FBO) sampling the terminal texture directly,
-avoiding GLES framebuffer compatibility issues.
-
-Config is monitored via GFileMonitor — save `cathode.toml` and settings re-apply immediately.
+The terminal is snapshotted via GTK's scene graph to a Cairo surface, uploaded to an OpenGL texture, then processed by a single-pass CRT fragment shader. GLArea is transparent when all CRT effects are disabled.
 
 ## License
 
-MIT. CRT shader based on CRT-Lottes approach (inline bloom, gaussian beam scanlines).
-TOML parser: [tomlc99](https://github.com/cktan/tomlc99) (MIT).
+MIT. TOML parser: [tomlc99](https://github.com/cktan/tomlc99) (MIT).
 
 ## Acknowledgments
 
-Several CRT effect concepts (burn-in persistence, jitter, flickering, glowing line,
-horizontal sync distortion, and rasterization variants) were inspired by
-[cool-retro-term](https://github.com/Swordfish90/cool-retro-term) by Filippo Scognamiglio,
-licensed under GPL-3.0. All implementation is original to this project.
+Several CRT effect concepts (burn-in, jitter, flickering, glowing line) were inspired by [cool-retro-term](https://github.com/Swordfish90/cool-retro-term) (GPL-3.0). All implementation is original to this project.
