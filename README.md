@@ -44,7 +44,7 @@ Installs:
 - Binary → `$prefix/bin/cathode`
 - Desktop entry → `$prefix/share/applications/com.n0zoberi.Cathode.desktop`
 - Icons → `$prefix/share/icons/hicolor/` (16×16 to 512×512)
-- Sample config + theme → `$prefix/share/cathode/`
+- Sample config → `$prefix/share/cathode/`
 
 ## Config
 

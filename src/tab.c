@@ -5,6 +5,8 @@
 #include <vte/vte.h>
 #include <glib/gi18n.h>
 
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+
 static CathodeConfig *cfg;
 static AdwTabView    *view;
 static GtkWindow     *win;
@@ -326,3 +328,5 @@ cathode_tab_get_selected_page(void)
 {
     return adw_tab_view_get_selected_page(view);
 }
+
+G_GNUC_END_IGNORE_DEPRECATIONS

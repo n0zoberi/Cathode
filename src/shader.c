@@ -266,8 +266,6 @@ upload_retro(CathodeShaderState *st, int w, int h)
                 c->glowing_line);
 }
 
-static void gl_check(const char *where);
-
 static gboolean
 render_cb(GtkGLArea *area, GdkGLContext *_ctx, gpointer data)
 {
@@ -426,16 +424,6 @@ on_redraw_idle(gpointer data)
     if (GTK_IS_WIDGET(st->gl_area))
         gtk_widget_queue_draw(GTK_WIDGET(st->gl_area));
     return G_SOURCE_REMOVE;
-}
-
-static void
-gl_check(const char *where)
-{
-    GLenum err = glGetError();
-    while (err != GL_NO_ERROR) {
-        g_warning("GL error at %s: 0x%x", where, err);
-        err = glGetError();
-    }
 }
 
 static void
