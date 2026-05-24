@@ -125,9 +125,9 @@ GtkOverlay
 |---|---|---|---|
 | `u_scanline_intensity` | `scanline_intensity` | float | 0.06 |
 | `u_scanline_period` | `scanline_period` | float | 2.0 |
-| `u_bloom_strength` | `bloom_strength` | float | 0.12 |
-| `u_bloom_sigma` | `bloom_sigma` | float | 2.5 |
-| `u_glow_strength` | `glow_strength` | float | 0.06 |
+| `u_bloom_strength` | `bloom_strength` | float | 0.20 |
+| `u_bloom_sigma` | `bloom_sigma` | float | 4.5 |
+| `u_glow_strength` | `glow_strength` | float | 0.13 |
 | `u_glow_threshold_low` | `glow_threshold_low` | float | 0.15 |
 | `u_glow_threshold_high` | `glow_threshold_high` | float | 0.6 |
 | `u_mask_strength` | `mask_strength` | float | 0.012 |
@@ -137,6 +137,7 @@ GtkOverlay
 | `u_color_bleed` | `color_bleed` | float | 0.08 |
 | `u_rounding` | `rounding` | float | 0.15 |
 | `u_shadow_strength` | `shadow_strength` | float | 0.10 |
+| `u_burn_in` | `burn_in` | float | 0.0 |
 
 ## CRT Effect Defaults
 
@@ -145,13 +146,14 @@ See `cathode.sample.toml` for full documentation. Effects enabled by default:
 | Effect | Uniform | Default | Description |
 |---|---|---|---|
 | Scanlines | `u_scanline_intensity` | 0.06 | Gaussian beam-spot profile |
-| Inline bloom | `u_bloom_strength` | 0.12 | Luminance-gated gaussian glow |
-| Phosphor glow | `u_glow_strength` | 0.06 | P22 warm tone emphasis |
+| Inline bloom | `u_bloom_strength` | 0.20 | Luminance-gated gaussian glow |
+| Phosphor glow | `u_glow_strength` | 0.13 | P22 warm tone emphasis |
 | Aperture grille | `u_mask_strength` | 0.012 | RGB vertical stripe mask |
-| Edge softening | `u_softening` | 0.12 | 3×3 gaussian edge blur |
+| Edge softening | `u_softening` | 0.12 | 3x3 gaussian edge blur |
 | Color bleed | `u_color_bleed` | 0.08 | Horizontal phosphor trail |
 | Pixel rounding | `u_rounding` | 0.15 | 2D circular beam spot |
 | Depth shadows | `u_shadow_strength` | 0.10 | Bezel + inner shadow |
+| Burn-in | `u_burn_in` | 0.0 | Phosphor persistence ghosting |
 
 ## Git Commits
 

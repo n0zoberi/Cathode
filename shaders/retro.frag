@@ -28,6 +28,7 @@ uniform float u_softening;            // 0 = off, edge softening, default 0.12
 uniform float u_color_bleed;          // 0 = off, horizontal color smear, default 0.08
 uniform float u_rounding;             // 0 = off, pixel roundness, default 0.15
 uniform float u_shadow_strength;      // 0 = off, depth/bezel shadows, default 0.10
+uniform float u_burn_in;              // 0 = off, phosphor persistence trail, default 0.0
 
 float hash(vec2 p)
 {
@@ -133,11 +134,11 @@ void main()
         float lum  = luma(col);
         float glow = smoothstep(u_glow_threshold_low,
                                  u_glow_threshold_high, lum);
-        glow = pow(glow, 0.6) * u_glow_strength;
+        glow = pow(glow, 0.4) * u_glow_strength;
         glow_amount = glow;
 
-        col.rgb += col.rgb * vec3(1.0, 0.93, 0.85) * glow * 1.5;
-        col.b   += col.b * glow * 0.25;
+        col.rgb += col.rgb * vec3(1.0, 0.93, 0.85) * glow * 2.5;
+        col.b   += col.b * glow * 0.35;
     }
 
     // ---- Inline bloom (gaussian kernel, luminance-gated, no FBO needed) ----
@@ -145,7 +146,7 @@ void main()
         float sigma = max(u_bloom_sigma, 1.0);
         int spread = int(ceil(sigma * 2.0));
         if (spread < 2) spread = 2;
-        if (spread > 5) spread = 5;
+        if (spread > 8) spread = 8;
 
         vec3 bloom_sum = vec3(0.0);
         float total = 0.0;
@@ -162,6 +163,29 @@ void main()
         float lum = luma(bloom);
         float gating = smoothstep(0.15, 0.5, lum);
         col.rgb += bloom * u_bloom_strength * gating;
+    }
+
+    // ---- Burn-in / phosphor persistence (afterimage trail) ----
+    if (u_burn_in > 0.001) {
+        float lum = luma(col);
+        float gate = smoothstep(0.15, 0.55, lum) * u_burn_in;
+
+        vec3 trail = vec3(0.0);
+        float total = 0.0;
+        int trail_taps = 5;
+        for (int i = 0; i < trail_taps; i++) {
+            float t = float(i + 1);
+            float angle = float(i) * 1.3 + u_time * 0.3;
+            vec2 offset = vec2(cos(angle), sin(angle)) * t * 0.7;
+            float w = exp(-0.6 * t);
+            trail += texture(u_terminal, uv + offset * texel * 2.5).rgb * w;
+            total += w;
+        }
+        trail /= total;
+
+        float decay = exp(-0.8 * u_time * 0.15 + 1.0);
+        vec3 afterglow = mix(col, trail, 0.55);
+        col = mix(col, afterglow, gate * clamp(decay, 0.0, 1.0));
     }
 
     // ---- Trinitron aperture grille (RGB vertical stripe mask) ----

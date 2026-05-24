@@ -213,6 +213,8 @@ upload_retro(CathodeShaderState *st, int w, int h)
                 c->rounding);
     glUniform1f(glGetUniformLocation(p, "u_shadow_strength"),
                 c->shadow_strength);
+    glUniform1f(glGetUniformLocation(p, "u_burn_in"),
+                c->burn_in);
 }
 
 static void gl_check(const char *where);
@@ -447,7 +449,8 @@ cathode_shader_is_effect_active(CathodeConfig *cfg)
            cfg->softening            > 0.001f ||
            cfg->color_bleed          > 0.001f ||
            cfg->rounding             > 0.001f ||
-           cfg->shadow_strength      > 0.001f;
+           cfg->shadow_strength      > 0.001f ||
+           cfg->burn_in              > 0.001f;
 }
 
 void

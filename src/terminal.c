@@ -2,11 +2,46 @@
 #include <stdlib.h>
 #include <string.h>
 
+struct _CathodeTerminalRealizeData {
+    VteTerminal     *term;
+    CathodeConfig   *cfg;
+};
+
+static void
+on_terminal_realize(GtkWidget *widget, gpointer data)
+{
+    struct _CathodeTerminalRealizeData *rdata = data;
+    VteTerminal *term = VTE_TERMINAL(widget);
+
+    switch (rdata->cfg->cursor_blink) {
+    case CURSOR_BLINK_OFF:
+        vte_terminal_set_cursor_blink_mode(term, VTE_CURSOR_BLINK_OFF);
+        break;
+    case CURSOR_BLINK_SYSTEM:
+        vte_terminal_set_cursor_blink_mode(term, VTE_CURSOR_BLINK_SYSTEM);
+        break;
+    default:
+        vte_terminal_set_cursor_blink_mode(term, VTE_CURSOR_BLINK_ON);
+        break;
+    }
+
+    g_signal_handlers_disconnect_by_func(widget,
+        G_CALLBACK(on_terminal_realize), data);
+    g_free(data);
+}
+
 VteTerminal *
 cathode_terminal_new(CathodeConfig *cfg)
 {
     VteTerminal *term = VTE_TERMINAL(vte_terminal_new());
     cathode_terminal_apply_config(term, cfg);
+
+    struct _CathodeTerminalRealizeData *rdata = g_new(struct _CathodeTerminalRealizeData, 1);
+    rdata->term = term;
+    rdata->cfg  = cfg;
+    g_signal_connect(GTK_WIDGET(term), "realize",
+                     G_CALLBACK(on_terminal_realize), rdata);
+
     return term;
 }
 

@@ -43,17 +43,17 @@ scanline_intensity = 0.12
 scanline_period = 4.0
 
 # Bloom (glow around bright content) strength
-# Default: 0.12
-bloom_strength = 0.12
+# Default: 0.20
+bloom_strength = 0.20
 
 # Bloom blur radius in pixels
 # Higher = wider glow, softer look
-# Default: 3.0
-bloom_sigma = 3.0
+# Default: 4.5
+bloom_sigma = 4.5
 
 # Phosphor glow strength on bright/saturated text
-# Default: 0.06
-glow_strength = 0.06
+# Default: 0.13
+glow_strength = 0.13
 
 # Phosphor glow brightness threshold — lower bound (0.0~1.0)
 # Pixels with luma below this get no glow effect.
@@ -111,6 +111,13 @@ rounding = 0.15
 # Works independently of curvature/vignetting.
 # Default: 0.10
 shadow_strength = 0.10
+
+# Burn-in / phosphor persistence trail (0.0 = off, 0.0~0.2 = typical)
+# Simulates the afterimage / ghosting effect of CRT phosphor lag.
+# Bright content leaves a fading trail that smears across nearby pixels.
+# Higher values produce more pronounced ghosting trails.
+# Default: 0.0 (off)
+burn_in = 0.0
 
 [bindings]
 keys = [

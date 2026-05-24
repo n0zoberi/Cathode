@@ -82,6 +82,9 @@ parse_crt(toml_table_t *root, CathodeConfig *cfg)
 
     d = toml_double_in(t, "shadow_strength");
     if (d.ok) cfg->shadow_strength = (float)d.u.d;
+
+    d = toml_double_in(t, "burn_in");
+    if (d.ok) cfg->burn_in = (float)d.u.d;
 }
 
 static void
@@ -210,9 +213,9 @@ cathode_config_default(void)
     cfg->font_size           = 11;
     cfg->scanline_intensity  = 0.06f;
     cfg->scanline_period     = 2.0f;
-    cfg->bloom_strength      = 0.12f;
-    cfg->bloom_sigma         = 3.0f;
-    cfg->glow_strength       = 0.06f;
+    cfg->bloom_strength      = 0.20f;
+    cfg->bloom_sigma         = 4.5f;
+    cfg->glow_strength       = 0.13f;
     cfg->glow_threshold_low  = 0.15f;
     cfg->glow_threshold_high = 0.6f;
     cfg->mask_strength       = 0.012f;
@@ -222,6 +225,7 @@ cathode_config_default(void)
     cfg->color_bleed         = 0.08f;
     cfg->rounding            = 0.15f;
     cfg->shadow_strength     = 0.10f;
+    cfg->burn_in             = 0.0f;
     cfg->auto_reload         = true;
     cfg->fg_color            = g_strdup("#ffffff");
     cfg->bg_color            = g_strdup("#000000");
@@ -325,6 +329,7 @@ cathode_config_reload(CathodeConfig *cfg)
     cfg->color_bleed         = fresh->color_bleed;
     cfg->rounding            = fresh->rounding;
     cfg->shadow_strength     = fresh->shadow_strength;
+    cfg->burn_in             = fresh->burn_in;
 
     set_str(&cfg->font_family,   fresh->font_family);
     set_str(&cfg->font_style,    fresh->font_style);

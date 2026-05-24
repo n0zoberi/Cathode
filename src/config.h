@@ -39,6 +39,7 @@ typedef struct {
     float color_bleed;
     float rounding;
     float shadow_strength;
+    float burn_in;
 
     char  *fg_color;
     char  *bg_color;
