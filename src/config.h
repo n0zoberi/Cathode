@@ -26,7 +26,7 @@ typedef struct {
     int    font_size;
 
     float scanline_intensity;
-    float scanline_period;
+    int scanline_period;
     float bloom_strength;
     float bloom_sigma;
     float glow_strength;
@@ -40,6 +40,9 @@ typedef struct {
     float rounding;
     float shadow_strength;
     float burn_in;
+    float jitter;
+    float flickering;
+    float glowing_line;
 
     char  *fg_color;
     char  *bg_color;

@@ -3,6 +3,7 @@
 #include <cairo.h>
 #include <gsk/gsk.h>
 #include <vte/vte.h>
+#include <math.h>
 
 typedef struct {
     CathodeConfig *cfg;
@@ -20,6 +21,10 @@ typedef struct {
     bool    needs_redraw;
     guint   redraw_idle_id;
     guint   tick_id;
+
+    unsigned char *accum_buffer;
+    int     accum_w, accum_h;
+    double  last_frame_time;
 } CathodeShaderState;
 
 static const float quad_vertices[] = {
@@ -151,6 +156,43 @@ capture_terminal(CathodeShaderState *st)
     unsigned char *data = cairo_image_surface_get_data(cs);
     int stride = cairo_image_surface_get_stride(cs);
 
+    // ---- Burn-in / phosphor persistence (CPU-side frame accumulation) ----
+    // Accumulates terminal frames with exponential decay so that bright content
+    // lingers after it disappears from the terminal, mimicking CRT phosphor lag.
+    if (st->cfg->burn_in > 0.001f) {
+        int buf_size = h * stride;
+        if (st->accum_w != w || st->accum_h != h) {
+            st->accum_buffer = g_realloc(st->accum_buffer, buf_size);
+            st->accum_w = w;
+            st->accum_h = h;
+            st->last_frame_time = 0.0;
+        }
+
+        double now = g_get_monotonic_time() / 1e6;
+        if (st->last_frame_time == 0.0) {
+            memcpy(st->accum_buffer, data, buf_size);
+        } else {
+            double dt = now - st->last_frame_time;
+            float half_life = st->cfg->burn_in * 2.0f;
+            if (half_life < 0.001f) half_life = 0.001f;
+            float decay = expf(-(float)dt / half_life);
+            int decay_fixed = (int)(decay * 256.0f);
+            if (decay_fixed < 0) decay_fixed = 0;
+            if (decay_fixed > 256) decay_fixed = 256;
+
+            for (int i = 0; i < buf_size; i++) {
+                int decayed = (st->accum_buffer[i] * decay_fixed + 128) >> 8;
+                st->accum_buffer[i] = decayed > data[i]
+                    ? (unsigned char)decayed
+                    : data[i];
+            }
+        }
+        st->last_frame_time = now;
+        data = st->accum_buffer;
+    } else {
+        st->last_frame_time = 0.0;
+    }
+
     glPixelStorei(GL_UNPACK_ROW_LENGTH, stride / 4);
     glBindTexture(GL_TEXTURE_2D, st->tex_terminal);
     glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, w, h,
@@ -189,7 +231,7 @@ upload_retro(CathodeShaderState *st, int w, int h)
     glUniform1f(glGetUniformLocation(p, "u_scanline_intensity"),
                 c->scanline_intensity);
     glUniform1f(glGetUniformLocation(p, "u_scanline_period"),
-                c->scanline_period);
+                (float)c->scanline_period);
     glUniform1f(glGetUniformLocation(p, "u_bloom_strength"),
                 c->bloom_strength);
     glUniform1f(glGetUniformLocation(p, "u_bloom_sigma"),
@@ -216,6 +258,12 @@ upload_retro(CathodeShaderState *st, int w, int h)
                 c->shadow_strength);
     glUniform1f(glGetUniformLocation(p, "u_burn_in"),
                 c->burn_in);
+    glUniform1f(glGetUniformLocation(p, "u_jitter"),
+                c->jitter);
+    glUniform1f(glGetUniformLocation(p, "u_flickering"),
+                c->flickering);
+    glUniform1f(glGetUniformLocation(p, "u_glowing_line"),
+                c->glowing_line);
 }
 
 static void gl_check(const char *where);
@@ -366,6 +414,7 @@ shader_state_free(gpointer data)
     CathodeShaderState *st = data;
     if (st->redraw_idle_id)
         g_source_remove(st->redraw_idle_id);
+    g_free(st->accum_buffer);
     g_free(st);
 }
 
@@ -469,7 +518,10 @@ cathode_shader_is_effect_active(CathodeConfig *cfg)
            cfg->color_bleed          > 0.001f ||
            cfg->rounding             > 0.001f ||
            cfg->shadow_strength      > 0.001f ||
-           cfg->burn_in              > 0.001f;
+           cfg->burn_in              > 0.001f ||
+           cfg->jitter               > 0.001f ||
+           cfg->flickering           > 0.001f ||
+           cfg->glowing_line         > 0.001f;
 }
 
 void

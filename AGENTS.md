@@ -74,15 +74,19 @@ GtkOverlay
    - Curvature (barrel distortion)
    - Chromatic aberration (RGB convergence error)
    - Terminal sampling
+   - Jitter (electron beam analog instability)
    - Edge softening (3×3 gaussian)
    - Color bleed (asymmetric horizontal smear)
    - Scanlines (gaussian beam-spot profile)
-   - Phosphor glow (P22 warm tone)
+   - Phosphor glow (P22 warm tone, spatial gaussian halo)
    - Inline bloom (gaussian kernel, luminance-gated, no FBO)
+   - Burn-in (CPU-side temporal frame accumulation)
+   - Glowing line (slowly scrolling bright scanline)
    - Aperture grille (RGB vertical stripe mask)
    - Vignetting (glass-depth darkening)
    - Pixel rounding (2D beam spot)
    - Depth shadows (bezel + inner shadow)
+   - Flickering (PSU ripple brightness modulation)
    - Film grain (3-octave hash noise)
    - Warm white point (~6500K)
 
@@ -122,12 +126,12 @@ GtkOverlay
 ## Shader Uniforms
 
 | GLSL uniform | Config field | Type | Default |
-|---|---|---|---|
+|---|---|---|---|---|
 | `u_scanline_intensity` | `scanline_intensity` | float | 0.06 |
-| `u_scanline_period` | `scanline_period` | float | 2.0 |
+| `u_scanline_period` | `scanline_period` | int | 6 |
 | `u_bloom_strength` | `bloom_strength` | float | 0.20 |
 | `u_bloom_sigma` | `bloom_sigma` | float | 4.5 |
-| `u_glow_strength` | `glow_strength` | float | 0.13 |
+| `u_glow_strength` | `glow_strength` | float | 0.2 |
 | `u_glow_threshold_low` | `glow_threshold_low` | float | 0.15 |
 | `u_glow_threshold_high` | `glow_threshold_high` | float | 0.6 |
 | `u_mask_strength` | `mask_strength` | float | 0.012 |
@@ -138,6 +142,9 @@ GtkOverlay
 | `u_rounding` | `rounding` | float | 0.15 |
 | `u_shadow_strength` | `shadow_strength` | float | 0.10 |
 | `u_burn_in` | `burn_in` | float | 0.0 |
+| `u_jitter` | `jitter` | float | 0.0 |
+| `u_flickering` | `flickering` | float | 0.0 |
+| `u_glowing_line` | `glowing_line` | float | 0.0 |
 
 ## CRT Effect Defaults
 
@@ -147,13 +154,16 @@ See `cathode.sample.toml` for full documentation. Effects enabled by default:
 |---|---|---|---|
 | Scanlines | `u_scanline_intensity` | 0.06 | Gaussian beam-spot profile |
 | Inline bloom | `u_bloom_strength` | 0.20 | Luminance-gated gaussian glow |
-| Phosphor glow | `u_glow_strength` | 0.13 | P22 warm tone emphasis |
+| Phosphor glow | `u_glow_strength` | 0.2 | P22 warm spatial halo |
 | Aperture grille | `u_mask_strength` | 0.012 | RGB vertical stripe mask |
 | Edge softening | `u_softening` | 0.12 | 3x3 gaussian edge blur |
 | Color bleed | `u_color_bleed` | 0.08 | Horizontal phosphor trail |
 | Pixel rounding | `u_rounding` | 0.15 | 2D circular beam spot |
 | Depth shadows | `u_shadow_strength` | 0.10 | Bezel + inner shadow |
-| Burn-in | `u_burn_in` | 0.0 | Phosphor persistence ghosting |
+| Burn-in | `u_burn_in` | 0.0 | CPU-side temporal accumulation |
+| Jitter | `u_jitter` | 0.0 | Electron beam analog instability |
+| Flickering | `u_flickering` | 0.0 | PSU ripple brightness modulation |
+| Glowing line | `u_glowing_line` | 0.0 | Slowly scrolling bright scanline |
 
 ## Git Commits
 

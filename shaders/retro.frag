@@ -3,6 +3,8 @@
 //          P22 phosphor glow, inline bloom, barrel curvature,
 //          chromatic convergence error, edge softening, color bleed,
 //          pixel rounding, depth shadows, vignetting, and film grain.
+// Burn-in, jitter, flickering, and glowing line effects inspired by
+// cool-retro-term (https://github.com/Swordfish90/cool-retro-term) GPL-3.0.
 #version 300 es
 precision highp float;
 
@@ -29,6 +31,9 @@ uniform float u_color_bleed;          // 0 = off, horizontal color smear, defaul
 uniform float u_rounding;             // 0 = off, pixel roundness, default 0.15
 uniform float u_shadow_strength;      // 0 = off, depth/bezel shadows, default 0.10
 uniform float u_burn_in;              // 0 = off, phosphor persistence trail, default 0.0
+uniform float u_jitter;               // 0 = off, electron beam jitter, sub-pixel displacement
+uniform float u_flickering;           // 0 = off, brightness flicker simulating PSU ripple
+uniform float u_glowing_line;         // 0 = off, bright horizontal scanline scrolling slowly
 
 float hash(vec2 p)
 {
@@ -66,6 +71,13 @@ void main()
             frag_color = vec4(0.0, 0.0, 0.0, 1.0);
             return;
         }
+    }
+
+    // ---- Electron beam jitter (sub-pixel displacement, simulates analog instability) ----
+    if (u_jitter > 0.0001) {
+        vec2 j = vec2(hash(uv + fract(u_time * 0.1)),
+                      hash(uv + fract(u_time * 0.13)));
+        uv += (j - 0.5) * texel * u_jitter;
     }
 
     // ---- Terminal sampling + chromatic aberration ----
@@ -115,7 +127,6 @@ void main()
     }
 
     // ---- Scanlines (gaussian beam-spot profile) ----
-    float glow_amount = 0.0;
     if (u_scanline_intensity > 0.001) {
         float phase    = frag.y / u_scanline_period;
         float v        = fract(phase);
@@ -129,16 +140,36 @@ void main()
         col.rgb *= mix(scanline, 1.0, reduce);
     }
 
-    // ---- Phosphor glow (P22 warm tone, blue ZnS:Ag emphasis) ----
+    // ---- Phosphor glow (P22 warm spatial halo) ----
+    // Samples a gaussian kernel around each pixel, luminance-gated by the
+    // threshold uniforms, producing a soft warm glow that bleeds into
+    // surrounding dark areas — like real CRT phosphor scatter.
     if (u_glow_strength > 0.001) {
-        float lum  = luma(col);
-        float glow = smoothstep(u_glow_threshold_low,
-                                 u_glow_threshold_high, lum);
-        glow = pow(glow, 0.4) * u_glow_strength;
-        glow_amount = glow;
+        float sigma = 1.2 + u_glow_strength * 10.0;
+        int spread = int(ceil(sigma * 1.0));
+        spread = clamp(spread, 1, 5);
 
-        col.rgb += col.rgb * vec3(1.0, 0.93, 0.85) * glow * 2.5;
-        col.b   += col.b * glow * 0.35;
+        vec3 glow = vec3(0.0);
+        float total = 0.0;
+
+        for (int y = -spread; y <= spread; y++) {
+            float wy = exp(-0.5 * float(y*y) / (sigma * sigma));
+            for (int x = -spread; x <= spread; x++) {
+                float wx = exp(-0.5 * float(x*x) / (sigma * sigma));
+                float w = wx * wy;
+                vec3 s = texture(u_terminal, uv + vec2(float(x), float(y)) * texel).rgb;
+                float slum = luma(s);
+                float sgate = smoothstep(u_glow_threshold_low,
+                                         u_glow_threshold_high, slum);
+                glow += s * sgate * w;
+                total += w;
+            }
+        }
+
+        glow /= max(total, 0.001);
+
+        col.rgb += glow * vec3(1.0, 0.93, 0.85) * u_glow_strength * 2.5;
+        col.b   += glow.b * u_glow_strength * 0.35;
     }
 
     // ---- Inline bloom (gaussian kernel, luminance-gated, no FBO needed) ----
@@ -165,27 +196,17 @@ void main()
         col.rgb += bloom * u_bloom_strength * gating;
     }
 
-    // ---- Burn-in / phosphor persistence (afterimage trail) ----
-    if (u_burn_in > 0.001) {
-        float lum = luma(col);
-        float gate = smoothstep(0.15, 0.55, lum) * u_burn_in;
+    // ---- Burn-in / phosphor persistence ----
+    // Temporal accumulation is handled CPU-side: capture_terminal() blends
+    // frames into a persistent buffer with exponential decay before upload.
+    // The terminal texture already contains the afterimage. All other CRT
+    // effects (bloom, glow, scanlines, etc.) apply naturally to it.
 
-        vec3 trail = vec3(0.0);
-        float total = 0.0;
-        int trail_taps = 5;
-        for (int i = 0; i < trail_taps; i++) {
-            float t = float(i + 1);
-            float angle = float(i) * 1.3 + u_time * 0.3;
-            vec2 offset = vec2(cos(angle), sin(angle)) * t * 0.7;
-            float w = exp(-0.6 * t);
-            trail += texture(u_terminal, uv + offset * texel * 2.5).rgb * w;
-            total += w;
-        }
-        trail /= total;
-
-        float decay = exp(-0.8 * u_time * 0.15 + 1.0);
-        vec3 afterglow = mix(col, trail, 0.55);
-        col = mix(col, afterglow, gate * clamp(decay, 0.0, 1.0));
+    // ---- Glowing line (slowly scrolling bright horizontal scanline) ----
+    if (u_glowing_line > 0.001) {
+        float line_pos = fract(u_time * 0.08);
+        float line = smoothstep(0.008, 0.0, abs(uv.y - line_pos)) * u_glowing_line;
+        col.rgb += line;
     }
 
     // ---- Trinitron aperture grille (RGB vertical stripe mask) ----
@@ -250,6 +271,12 @@ void main()
         float lum      = luma(col);
         float strength = (1.0 - lum) * 0.35 + dist_sq * 0.18;
         col.rgb += grain * strength;
+    }
+
+    // ---- Flickering (power supply ripple brightness modulation) ----
+    if (u_flickering > 0.001) {
+        float flicker = 1.0 + (hash(vec2(u_time * 0.05, u_time * 0.07)) - 0.5) * u_flickering;
+        col.rgb *= clamp(flicker, 0.0, 2.0);
     }
 
     // ---- CRT warm white point (~6500 K) ----

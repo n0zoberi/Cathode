@@ -97,6 +97,23 @@
 - Added GL error diagnostics (`glCheckFramebufferStatus`, `glGetError`)
 - Fixed bloom FBO → replaced with inline single-pass bloom
 
+## Phase 11: CRT Effects Refinement ✅
+
+- **Burn-in fix** — Replaced broken spatial-ghost + global-time-decay with CPU-side frame accumulation:
+  - Persistent `accum_buffer` holds blended frames with exponential decay
+  - `max(accum * decay, current)` phosphor model: bright content lingers after disappearing
+  - Half-life mapped from `burn_in` config: `half_life = burn_in * 2.0`
+  - Removed incorrect `u_time`-based global decay from shader
+  - Added `-lm` link dependency for `expf`
+- **Phosphor glow** — Rewrote from per-pixel brightness boost to spatial gaussian halo:
+  - Samples N×N kernel around each pixel, luminance-gated by thresholds
+  - Kernel width scales with `glow_strength` (higher = wider + brighter)
+  - Warm P22 tint applied to the spread glow
+- **Jitter** — Sub-pixel UV displacement via hash noise, simulates electron beam instability
+- **Flickering** — Global brightness modulation via noise, simulates PSU ripple
+- **Glowing line** — Slowly scrolling horizontal bright scanline overlay
+- **All effects driven by cool-retro-term inspiration** (see README acknowledgments)
+
 ## Open Issues
 
 | Issue | Status | Notes |

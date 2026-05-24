@@ -13,6 +13,9 @@ cathode_include = include_directories('.')
 
 cairo_dep = dependency('cairo', version: '>= 1.16')
 
+cc = meson.get_compiler('c')
+m_dep = cc.find_library('m', required: false)
+
 cathode_deps = [
   gtk4_dep,
   adwaita_dep,
@@ -20,6 +23,7 @@ cathode_deps = [
   epoxy_dep,
   glib_dep,
   cairo_dep,
+  m_dep,
 ]
 
 gnome = import('gnome')

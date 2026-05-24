@@ -44,8 +44,8 @@ parse_crt(toml_table_t *root, CathodeConfig *cfg)
     d = toml_double_in(t, "scanline_intensity");
     if (d.ok) cfg->scanline_intensity = (float)d.u.d;
 
-    d = toml_double_in(t, "scanline_period");
-    if (d.ok) cfg->scanline_period = (float)d.u.d;
+    d = toml_int_in(t, "scanline_period");
+    if (d.ok) cfg->scanline_period = (int)d.u.i;
 
     d = toml_double_in(t, "bloom_strength");
     if (d.ok) cfg->bloom_strength = (float)d.u.d;
@@ -85,6 +85,15 @@ parse_crt(toml_table_t *root, CathodeConfig *cfg)
 
     d = toml_double_in(t, "burn_in");
     if (d.ok) cfg->burn_in = (float)d.u.d;
+
+    d = toml_double_in(t, "jitter");
+    if (d.ok) cfg->jitter = (float)d.u.d;
+
+    d = toml_double_in(t, "flickering");
+    if (d.ok) cfg->flickering = (float)d.u.d;
+
+    d = toml_double_in(t, "glowing_line");
+    if (d.ok) cfg->glowing_line = (float)d.u.d;
 }
 
 static void
@@ -212,7 +221,7 @@ cathode_config_default(void)
     cfg->font_family         = g_strdup("monospace");
     cfg->font_size           = 11;
     cfg->scanline_intensity  = 0.06f;
-    cfg->scanline_period     = 2.0f;
+    cfg->scanline_period     = 6;
     cfg->bloom_strength      = 0.20f;
     cfg->bloom_sigma         = 4.5f;
     cfg->glow_strength       = 0.13f;
@@ -226,6 +235,9 @@ cathode_config_default(void)
     cfg->rounding            = 0.15f;
     cfg->shadow_strength     = 0.10f;
     cfg->burn_in             = 0.0f;
+    cfg->jitter              = 0.0f;
+    cfg->flickering          = 0.0f;
+    cfg->glowing_line        = 0.0f;
     cfg->auto_reload         = true;
     cfg->fg_color            = g_strdup("#ffffff");
     cfg->bg_color            = g_strdup("#000000");
@@ -330,6 +342,9 @@ cathode_config_reload(CathodeConfig *cfg)
     cfg->rounding            = fresh->rounding;
     cfg->shadow_strength     = fresh->shadow_strength;
     cfg->burn_in             = fresh->burn_in;
+    cfg->jitter              = fresh->jitter;
+    cfg->flickering          = fresh->flickering;
+    cfg->glowing_line        = fresh->glowing_line;
 
     set_str(&cfg->font_family,   fresh->font_family);
     set_str(&cfg->font_style,    fresh->font_style);

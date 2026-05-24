@@ -39,8 +39,8 @@ scanline_intensity = 0.12
 
 # Number of pixels per scanline group
 # Each group of N rows alternates between bright and dim
-# Default: 4.0
-scanline_period = 4.0
+# Default: 6.0
+scanline_period = 6.0
 
 # Bloom (glow around bright content) strength
 # Default: 0.20
@@ -52,8 +52,8 @@ bloom_strength = 0.20
 bloom_sigma = 4.5
 
 # Phosphor glow strength on bright/saturated text
-# Default: 0.13
-glow_strength = 0.13
+# Default: 0.2
+glow_strength = 0.2
 
 # Phosphor glow brightness threshold — lower bound (0.0~1.0)
 # Pixels with luma below this get no glow effect.
@@ -118,6 +118,25 @@ shadow_strength = 0.10
 # Higher values produce more pronounced ghosting trails.
 # Default: 0.0 (off)
 burn_in = 0.0
+
+# Electron beam jitter / analog instability (0.0 = off, 0.0~0.01 = typical)
+# Random sub-pixel displacement of the sampling position, simulating the
+# slight electron beam instability of aging CRT monitors.
+# Higher values produce more pronounced "shimmer" / crawling pixels.
+# Default: 0.0 (off)
+# jitter = 0.005
+
+# Flickering / power supply ripple (0.0 = off, 0.0~0.3 = typical)
+# Modulates screen brightness with noise, simulating AC ripple in the
+# CRT power supply. Creates a subtle pulsing effect.
+# Default: 0.0 (off)
+# flickering = 0.1
+
+# Glowing line / horizontal scanline bleed (0.0 = off, 0.0~0.5 = typical)
+# A bright horizontal scanline that slowly scrolls down the screen,
+# simulating the capacitive coupling bleed of aging CRT electron beams.
+# Default: 0.0 (off)
+# glowing_line = 0.2
 
 [bindings]
 keys = [
