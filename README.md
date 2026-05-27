@@ -1,5 +1,7 @@
 # Cathode — CRT Terminal Emulator
 
+![image](Cathode.gif)
+
 A GTK4/libadwaita terminal emulator with a retro CRT scanline shader.
 
 ## Features
