@@ -30,7 +30,15 @@ family = "monospace"
 size = 12
 
 # CRT retro effect configuration
-# Set any value to 0 to disable the corresponding effect
+# Set any value to 0 to disable the corresponding effect.
+#
+# Effects are applied in the following pipeline order:
+#   1. Sampling (curvature → jitter → chromatic aberration)
+#   2. Re-sample (softening → color bleed)
+#   3. Additive light (bloom → phosphor glow) — then masked by scanlines
+#   4. Pixel mask (rounding) + CRT mask (scanlines → aperture grille)
+#   5. Screen glass (vignette → depth shadows)
+#   6. Post-mask overlays (glowing line → film grain → flickering)
 [crt]
 # Scanline mode: 0 = gaussian beam profile (smooth), 1 = square wave (harsh retro)
 # Default: 0
@@ -46,9 +54,10 @@ scanline_intensity = 0.12
 # Default: 6.0
 scanline_period = 6.0
 
-# Bloom — isotropic 2D gaussian blur added to the image (retro.hlsl style)
+# Bloom — isotropic 2D gaussian blur blended over the image (retro.hlsl style)
 # The terminal content is blurred with a symmetric gaussian kernel and
-# blended back at this strength. Higher = stronger glow.
+# blended back at this strength. Applied before scanlines so the shadow
+# mask attenuates bloom light (matching real CRT physics).
 # Default: 0.30 (matches retro.hlsl / Windows Terminal retro effect)
 bloom_strength = 0.30
 
@@ -58,6 +67,7 @@ bloom_strength = 0.30
 bloom_sigma = 4.5
 
 # Phosphor glow strength on bright/saturated text
+# Applied before scanlines (under the mask) like bloom.
 # Default: 0.2
 glow_strength = 0.2
 
@@ -107,6 +117,7 @@ color_bleed = 0.08
 # Pixel rounding (0.0 = off, 0.0~0.4 = typical)
 # Creates rounded, soft-looking pixels via a 2D gaussian beam spot.
 # Simulates the circular cross-section of CRT electron beams.
+# Applied before scanlines as part of the pixel-level mask stage.
 # Higher values produce more pronounced "dot" appearance.
 # Default: 0.15
 rounding = 0.15
@@ -120,12 +131,12 @@ shadow_strength = 0.10
 
 # Vignette / glass-depth darkening toward edges (0.0 = off, 0.0~0.5 = typical)
 # Darkens the screen corners to simulate CRT glass depth.
-# Unlike the old curvature-tied vignette, this works independently.
+# Works independently of curvature.
 # Default: 0.0 (off)
 # vignette_strength = 0.25
 
 # Burn-in / phosphor persistence trail (0.0 = off, 0.0~0.2 = typical)
-# Simulates the afterimage / ghosting effect of CRT phosphor lag.
+# CPU-side temporal frame accumulation (not part of the GLSL pipeline).
 # Bright content leaves a fading trail that smears across nearby pixels.
 # Higher values produce more pronounced ghosting trails.
 # Default: 0.0 (off)
@@ -153,6 +164,8 @@ film_grain = 0.005
 # Glowing line / horizontal scanline bleed (0.0 = off, 0.0~0.5 = typical)
 # A bright horizontal scanline that slowly scrolls down the screen,
 # simulating the capacitive coupling bleed of aging CRT electron beams.
+# Rendered after vignette/shadows as a post-mask overlay (brightness
+# unaffected by screen glass darkening).
 # Default: 0.0 (off)
 # glowing_line = 0.2
 
