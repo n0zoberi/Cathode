@@ -59,14 +59,14 @@ glow_strength = 0.2
 # Phosphor glow brightness threshold — lower bound (0.0~1.0)
 # Pixels with luma below this get no glow effect.
 # Lower = more content glows (including dim text).
-# Default: 0.15
-glow_threshold_low = 0.15
+# Default: 0.0
+glow_threshold_low = 0.0
 
 # Phosphor glow brightness threshold — upper bound (0.0~1.0)
 # Pixels with luma above this get full glow effect.
 # Lower = glow saturates at lower brightness.
-# Default: 0.6
-glow_threshold_high = 0.6
+# Default: 1.0
+glow_threshold_high = 1.0
 
 # Aperture grille / shadow mask strength (0.0 = off, 0.005~0.03 = typical)
 # Simulates the vertical RGB stripe structure of Trinitron CRT tubes.

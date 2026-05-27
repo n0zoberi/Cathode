@@ -222,8 +222,8 @@ cathode_config_default(void)
     cfg->bloom_strength      = 0.20f;
     cfg->bloom_sigma         = 4.5f;
     cfg->glow_strength       = 0.13f;
-    cfg->glow_threshold_low  = 0.15f;
-    cfg->glow_threshold_high = 0.6f;
+    cfg->glow_threshold_low  = 0.0f;
+    cfg->glow_threshold_high = 1.0f;
     cfg->mask_strength       = 0.012f;
     cfg->curvature           = 0.0f;
     cfg->chromatic_aberration = 0.0f;

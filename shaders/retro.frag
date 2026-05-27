@@ -21,8 +21,8 @@ uniform float u_scanline_period;      // rows per scanline group, default 2.0
 uniform float u_bloom_strength;       // 0 = off, 0.12 = default
 uniform float u_bloom_sigma;          // bloom blur radius, default 2.5
 uniform float u_glow_strength;        // 0 = off, 0.06 = default
-uniform float u_glow_threshold_low;   // luma below this = no glow, default 0.15
-uniform float u_glow_threshold_high;  // luma above this = full glow, default 0.6
+uniform float u_glow_threshold_low;   // per-sample brightness gate low, default 0.0
+uniform float u_glow_threshold_high;  // per-sample brightness gate high, default 1.0
 uniform float u_mask_strength;        // 0 = off, 0.005~0.03 typical
 uniform float u_curvature;            // 0 = flat, 0.03 = typical CRT bulge
 uniform float u_chromatic_aberration; // 0 = off, 0.0005~0.002 typical
@@ -141,35 +141,39 @@ void main()
     }
 
     // ---- Phosphor glow (P22 warm spatial halo) ----
-    // Samples a gaussian kernel around each pixel, luminance-gated by the
-    // threshold uniforms, producing a soft warm glow that bleeds into
-    // surrounding dark areas — like real CRT phosphor scatter.
+    // Anisotropic Laplacian kernel: horizontal spread > vertical,
+    // simulating CRT electron beam scan direction. Per-sample
+    // phosphor weights model P22 color response. Contribution gated
+    // by per-sample luma so bright regions drive the glow naturally.
     if (u_glow_strength > 0.001) {
         float sigma = 1.2 + u_glow_strength * 10.0;
-        int spread = int(ceil(sigma * 1.0));
-        spread = clamp(spread, 1, 5);
+        float sigma_h = sigma * 1.5;
+        float sigma_v = sigma * 0.6;
+        int spread = int(ceil(sigma * 3.0));
+        spread = clamp(spread, 1, 6);
 
         vec3 glow = vec3(0.0);
         float total = 0.0;
 
         for (int y = -spread; y <= spread; y++) {
-            float wy = exp(-0.5 * float(y*y) / (sigma * sigma));
+            float wy = exp(-abs(float(y)) / sigma_v);
             for (int x = -spread; x <= spread; x++) {
-                float wx = exp(-0.5 * float(x*x) / (sigma * sigma));
+                float wx = exp(-abs(float(x)) / sigma_h);
                 float w = wx * wy;
                 vec3 s = texture(u_terminal, uv + vec2(float(x), float(y)) * texel).rgb;
                 float slum = luma(s);
                 float sgate = smoothstep(u_glow_threshold_low,
                                          u_glow_threshold_high, slum);
-                glow += s * sgate * w;
+                vec3 phosphorWeight = vec3(1.0, 1.15, 0.85);
+                glow += s * phosphorWeight * w * sgate;
                 total += w;
             }
         }
 
         glow /= max(total, 0.001);
 
-        col.rgb += glow * vec3(1.0, 0.93, 0.85) * u_glow_strength * 2.5;
-        col.b   += glow.b * u_glow_strength * 0.35;
+        float brightness = max(col.r, max(col.g, col.b));
+        col.rgb += glow * u_glow_strength * 2.5 * brightness;
     }
 
     // ---- Inline bloom (global brightness boost, no gating) ----
