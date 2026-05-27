@@ -137,25 +137,23 @@ void main()
         col = mix(col, bleed, weight);
     }
 
-    // ---- Scanlines ----
-    if (u_scanline_intensity > 0.001) {
-        if (u_scanline_mode == 0) {
-            // Gaussian beam-spot profile
-            float phase    = frag.y / u_scanline_period;
-            float v        = fract(phase);
-            float spread   = 0.24;
-            float d        = (v - 0.5) / spread;
-            float beam     = exp(-0.5 * d * d);
-            float scanline = mix(1.0 - u_scanline_intensity, 1.0, beam);
+    // ---- Bloom (isotropic 2D gaussian, retro.hlsl style) ----
+    if (u_bloom_strength > 0.001) {
+        float sigma = max(u_bloom_sigma, 0.5);
+        int radius = int(ceil(sigma * 2.5));
+        radius = clamp(radius, 1, 13);
 
-            float lum    = luma(col);
-            float reduce = smoothstep(0.0, 0.45, lum) * 0.8;
-            col.rgb *= mix(scanline, 1.0, reduce);
-        } else {
-            // Square wave (retro.hlsl / Windows Terminal style)
-            float wave = 1.0 - mod(floor(frag.y / u_scanline_period), 2.0) * u_scanline_intensity;
-            col.rgb *= wave;
+        vec3 bloom_sum = vec3(0.0);
+        float total = 0.0;
+        for (int y = -radius; y <= radius; y++) {
+            for (int x = -radius; x <= radius; x++) {
+                float w = exp(-0.5 * float(x*x + y*y) / (sigma * sigma));
+                bloom_sum += srgb_to_linear(texture(u_terminal, uv + vec2(float(x), float(y)) * texel).rgb) * w;
+                total += w;
+            }
         }
+        vec3 bloom = bloom_sum / max(total, 0.001);
+        col.rgb += bloom * u_bloom_strength;
     }
 
     // ---- Phosphor glow (P22 warm spatial halo) ----
@@ -190,30 +188,35 @@ void main()
         col.rgb += glow * u_glow_strength * 2.5 * brightness;
     }
 
-    // ---- Bloom (isotropic 2D gaussian, retro.hlsl style) ----
-    if (u_bloom_strength > 0.001) {
-        float sigma = max(u_bloom_sigma, 0.5);
-        int radius = int(ceil(sigma * 2.5));
-        radius = clamp(radius, 1, 13);
-
-        vec3 bloom_sum = vec3(0.0);
-        float total = 0.0;
-        for (int y = -radius; y <= radius; y++) {
-            for (int x = -radius; x <= radius; x++) {
-                float w = exp(-0.5 * float(x*x + y*y) / (sigma * sigma));
-                bloom_sum += srgb_to_linear(texture(u_terminal, uv + vec2(float(x), float(y)) * texel).rgb) * w;
-                total += w;
-            }
-        }
-        vec3 bloom = bloom_sum / max(total, 0.001);
-        col.rgb += bloom * u_bloom_strength;
+    // ---- Pixel rounding (2D gaussian beam spot) ----
+    if (u_rounding > 0.001) {
+        vec2 pixel_center = floor(frag) + 0.5;
+        vec2 offset = frag - pixel_center;
+        float dist = length(offset * 2.0);
+        float spot = exp(-2.5 * dist * dist);
+        float factor = mix(1.0 - u_rounding * 0.7, 1.0, spot);
+        col.rgb *= factor;
     }
 
-    // ---- Glowing line ----
-    if (u_glowing_line > 0.001) {
-        float line_pos = fract(u_time * 0.08);
-        float line = smoothstep(0.008, 0.0, abs(uv.y - line_pos)) * u_glowing_line;
-        col.rgb += line;
+    // ---- Scanlines ----
+    if (u_scanline_intensity > 0.001) {
+        if (u_scanline_mode == 0) {
+            // Gaussian beam-spot profile
+            float phase    = frag.y / u_scanline_period;
+            float v        = fract(phase);
+            float spread   = 0.24;
+            float d        = (v - 0.5) / spread;
+            float beam     = exp(-0.5 * d * d);
+            float scanline = mix(1.0 - u_scanline_intensity, 1.0, beam);
+
+            float lum    = luma(col);
+            float reduce = smoothstep(0.0, 0.45, lum) * 0.8;
+            col.rgb *= mix(scanline, 1.0, reduce);
+        } else {
+            // Square wave (retro.hlsl / Windows Terminal style)
+            float wave = 1.0 - mod(floor(frag.y / u_scanline_period), 2.0) * u_scanline_intensity;
+            col.rgb *= wave;
+        }
     }
 
     // ---- Aperture grille (Trinitron RGB vertical stripe mask) ----
@@ -241,16 +244,6 @@ void main()
         col.rgb *= mix(1.0, v, u_vignette_strength);
     }
 
-    // ---- Pixel rounding (2D gaussian beam spot) ----
-    if (u_rounding > 0.001) {
-        vec2 pixel_center = floor(frag) + 0.5;
-        vec2 offset = frag - pixel_center;
-        float dist = length(offset * 2.0);
-        float spot = exp(-2.5 * dist * dist);
-        float factor = mix(1.0 - u_rounding * 0.7, 1.0, spot);
-        col.rgb *= factor;
-    }
-
     // ---- Depth shadows ----
     if (u_shadow_strength > 0.001) {
         float corner = dist_sq;
@@ -265,6 +258,13 @@ void main()
 
         float edge_grad = smoothstep(0.85, 1.0, corner);
         col.rgb *= (1.0 - edge_grad * u_shadow_strength * 0.15);
+    }
+
+    // ---- Glowing line ----
+    if (u_glowing_line > 0.001) {
+        float line_pos = fract(u_time * 0.08);
+        float line = smoothstep(0.008, 0.0, abs(uv.y - line_pos)) * u_glowing_line;
+        col.rgb += line;
     }
 
     // ---- Film grain (phosphor coating irregularity noise) ----
