@@ -41,6 +41,9 @@ parse_crt(toml_table_t *root, CathodeConfig *cfg)
 
     toml_datum_t d;
 
+    d = toml_int_in(t, "scanline_mode");
+    if (d.ok) cfg->scanline_mode = (int)d.u.i;
+
     d = toml_double_in(t, "scanline_intensity");
     if (d.ok) cfg->scanline_intensity = (float)d.u.d;
 
@@ -83,8 +86,14 @@ parse_crt(toml_table_t *root, CathodeConfig *cfg)
     d = toml_double_in(t, "shadow_strength");
     if (d.ok) cfg->shadow_strength = (float)d.u.d;
 
+    d = toml_double_in(t, "vignette_strength");
+    if (d.ok) cfg->vignette_strength = (float)d.u.d;
+
     d = toml_double_in(t, "burn_in");
     if (d.ok) cfg->burn_in = (float)d.u.d;
+
+    d = toml_double_in(t, "film_grain");
+    if (d.ok) cfg->film_grain = (float)d.u.d;
 
     d = toml_double_in(t, "jitter");
     if (d.ok) cfg->jitter = (float)d.u.d;
@@ -217,9 +226,10 @@ cathode_config_default(void)
     cfg->term                = g_strdup("xterm-256color");
     cfg->font_family         = g_strdup("monospace");
     cfg->font_size           = 11;
+    cfg->scanline_mode       = 0;
     cfg->scanline_intensity  = 0.06f;
     cfg->scanline_period     = 6;
-    cfg->bloom_strength      = 0.20f;
+    cfg->bloom_strength      = 0.30f;
     cfg->bloom_sigma         = 4.5f;
     cfg->glow_strength       = 0.13f;
     cfg->glow_threshold_low  = 0.0f;
@@ -231,7 +241,9 @@ cathode_config_default(void)
     cfg->color_bleed         = 0.08f;
     cfg->rounding            = 0.15f;
     cfg->shadow_strength     = 0.10f;
+    cfg->vignette_strength   = 0.0f;
     cfg->burn_in             = 0.0f;
+    cfg->film_grain          = 0.005f;
     cfg->jitter              = 0.0f;
     cfg->flickering          = 0.0f;
     cfg->glowing_line        = 0.0f;
@@ -324,6 +336,7 @@ cathode_config_reload(CathodeConfig *cfg)
     cfg->font_size         = fresh->font_size;
     cfg->auto_reload       = fresh->auto_reload;
 
+    cfg->scanline_mode       = fresh->scanline_mode;
     cfg->scanline_intensity  = fresh->scanline_intensity;
     cfg->scanline_period     = fresh->scanline_period;
     cfg->bloom_strength      = fresh->bloom_strength;
@@ -338,7 +351,9 @@ cathode_config_reload(CathodeConfig *cfg)
     cfg->color_bleed         = fresh->color_bleed;
     cfg->rounding            = fresh->rounding;
     cfg->shadow_strength     = fresh->shadow_strength;
+    cfg->vignette_strength   = fresh->vignette_strength;
     cfg->burn_in             = fresh->burn_in;
+    cfg->film_grain          = fresh->film_grain;
     cfg->jitter              = fresh->jitter;
     cfg->flickering          = fresh->flickering;
     cfg->glowing_line        = fresh->glowing_line;

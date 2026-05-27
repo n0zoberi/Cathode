@@ -228,6 +228,8 @@ upload_retro(CathodeShaderState *st, int w, int h)
     }
     glUniform4fv(glGetUniformLocation(p, "u_background"), 1, bg);
 
+    glUniform1i(glGetUniformLocation(p, "u_scanline_mode"),
+                c->scanline_mode);
     glUniform1f(glGetUniformLocation(p, "u_scanline_intensity"),
                 c->scanline_intensity);
     glUniform1f(glGetUniformLocation(p, "u_scanline_period"),
@@ -256,8 +258,12 @@ upload_retro(CathodeShaderState *st, int w, int h)
                 c->rounding);
     glUniform1f(glGetUniformLocation(p, "u_shadow_strength"),
                 c->shadow_strength);
+    glUniform1f(glGetUniformLocation(p, "u_vignette_strength"),
+                c->vignette_strength);
     glUniform1f(glGetUniformLocation(p, "u_burn_in"),
                 c->burn_in);
+    glUniform1f(glGetUniformLocation(p, "u_film_grain"),
+                c->film_grain);
     glUniform1f(glGetUniformLocation(p, "u_jitter"),
                 c->jitter);
     glUniform1f(glGetUniformLocation(p, "u_flickering"),
@@ -506,7 +512,9 @@ cathode_shader_is_effect_active(CathodeConfig *cfg)
            cfg->color_bleed          > 0.001f ||
            cfg->rounding             > 0.001f ||
            cfg->shadow_strength      > 0.001f ||
+           cfg->vignette_strength    > 0.001f ||
            cfg->burn_in              > 0.001f ||
+           cfg->film_grain           > 0.001f ||
            cfg->jitter               > 0.001f ||
            cfg->flickering           > 0.001f ||
            cfg->glowing_line         > 0.001f;

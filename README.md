@@ -6,10 +6,12 @@ A GTK4/libadwaita terminal emulator with a retro CRT scanline shader.
 
 ## Features
 
-- **CRT retro effect pipeline** — 12 configurable effects:
-  - Scanlines, phosphor glow, inline bloom, aperture grille, edge softening, color bleed
-  - Pixel rounding, depth shadows, burn-in, jitter, flickering, glowing line
-  - Curvature + chromatic aberration + vignetting + film grain + warm white point
+- **CRT retro effect pipeline** — 18 configurable effects:
+  - Gamma-corrected linear-space rendering pipeline
+  - Scanlines (gaussian beam or square wave), phosphor glow, isotropic bloom
+  - Aperture grille, edge softening, color bleed, pixel rounding, depth shadows
+  - Burn-in, jitter, flickering, glowing line
+  - Curvature + chromatic aberration + vignette + film grain + warm white point
 - **Multiple tabs** — AdwTabView + AdwTabBar with keyboard shortcuts
 - **Search** — Ctrl+Shift+F with VTE regex, Enter/Shift+Enter navigation
 - **Header bar menu** — copy, paste, search, new/close/rename tab, clear screen, reset terminal, open config, quit
@@ -56,13 +58,14 @@ See `cathode.sample.toml` for the full reference, or copy it to `~/.config/catho
 
 | Key | Default | Description |
 |---|---|---|
+| `scanline_mode` | `0` | 0=gaussian beam, 1=square wave (retro.hlsl style) |
 | `scanline_intensity` | `0.06` | Scanline darkness (0=off, 1=black) |
 | `scanline_period` | `6` | Pixel rows per scanline group |
-| `bloom_strength` | `0.05` | Global screen brightness boost |
-| `bloom_sigma` | `4.5` | Bloom blur radius |
+| `bloom_strength` | `0.30` | Isotropic 2D gaussian bloom blend factor |
+| `bloom_sigma` | `4.5` | Bloom blur radius (gaussian sigma) |
 | `glow_strength` | `0.2` | Phosphor glow on bright text |
-| `glow_threshold_low` | `0.15` | Min luma for glow effect |
-| `glow_threshold_high` | `0.6` | Luma threshold for full glow |
+| `glow_threshold_low` | `0.0` | Min luma for glow effect |
+| `glow_threshold_high` | `1.0` | Luma threshold for full glow |
 | `mask_strength` | `0.012` | Aperture grille stripe visibility |
 | `curvature` | `0.0` | Barrel distortion |
 | `chromatic_aberration` | `0.0` | RGB separation at edges |
@@ -70,6 +73,7 @@ See `cathode.sample.toml` for the full reference, or copy it to `~/.config/catho
 | `color_bleed` | `0.08` | Horizontal color smear |
 | `rounding` | `0.15` | Pixel roundness |
 | `shadow_strength` | `0.10` | Bezel + inner depth shadow |
+| `vignette_strength` | `0.0` | Glass-depth corner darkening (independent of curvature) |
 | `burn_in` | `0.0` | Phosphor persistence |
 | `jitter` | `0.0` | Electron beam jitter |
 | `flickering` | `0.0` | Brightness ripple |

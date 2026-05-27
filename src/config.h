@@ -25,8 +25,9 @@ typedef struct {
     char  *font_style;
     int    font_size;
 
+    int   scanline_mode;          // 0 = gaussian beam, 1 = square wave
     float scanline_intensity;
-    int scanline_period;
+    int   scanline_period;
     float bloom_strength;
     float bloom_sigma;
     float glow_strength;
@@ -39,7 +40,9 @@ typedef struct {
     float color_bleed;
     float rounding;
     float shadow_strength;
+    float vignette_strength;
     float burn_in;
+    float film_grain;
     float jitter;
     float flickering;
     float glowing_line;

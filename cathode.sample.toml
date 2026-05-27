@@ -32,6 +32,10 @@ size = 12
 # CRT retro effect configuration
 # Set any value to 0 to disable the corresponding effect
 [crt]
+# Scanline mode: 0 = gaussian beam profile (smooth), 1 = square wave (harsh retro)
+# Default: 0
+# scanline_mode = 0
+
 # Intensity of scanline darkness (0.0 = none, 1.0 = full black)
 # Higher values make alternating pixel rows darker
 # Default: 0.12
@@ -42,13 +46,14 @@ scanline_intensity = 0.12
 # Default: 6.0
 scanline_period = 6.0
 
-# Bloom — global screen brightness boost
-# Higher values = brighter display with soft glow.
-# Default: 0.05
-bloom_strength = 0.05
+# Bloom — isotropic 2D gaussian blur added to the image (retro.hlsl style)
+# The terminal content is blurred with a symmetric gaussian kernel and
+# blended back at this strength. Higher = stronger glow.
+# Default: 0.30 (matches retro.hlsl / Windows Terminal retro effect)
+bloom_strength = 0.30
 
-# Bloom blur radius in pixels
-# Higher = wider glow, softer look
+# Bloom blur radius in pixels (gaussian sigma)
+# Higher = wider, softer glow
 # Default: 4.5
 bloom_sigma = 4.5
 
@@ -113,12 +118,24 @@ rounding = 0.15
 # Default: 0.10
 shadow_strength = 0.10
 
+# Vignette / glass-depth darkening toward edges (0.0 = off, 0.0~0.5 = typical)
+# Darkens the screen corners to simulate CRT glass depth.
+# Unlike the old curvature-tied vignette, this works independently.
+# Default: 0.0 (off)
+# vignette_strength = 0.25
+
 # Burn-in / phosphor persistence trail (0.0 = off, 0.0~0.2 = typical)
 # Simulates the afterimage / ghosting effect of CRT phosphor lag.
 # Bright content leaves a fading trail that smears across nearby pixels.
 # Higher values produce more pronounced ghosting trails.
 # Default: 0.0 (off)
 burn_in = 0.0
+
+# Film grain / phosphor coating noise (0.0 = off, 0.001~0.01 = typical)
+# Simulates the microscopic irregularity of CRT phosphor coating.
+# Higher values produce more visible noise, especially in dark areas.
+# Default: 0.005
+film_grain = 0.005
 
 # Electron beam jitter / analog instability (0.0 = off, 0.0~0.01 = typical)
 # Random sub-pixel displacement of the sampling position, simulating the
