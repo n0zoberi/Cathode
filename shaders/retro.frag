@@ -209,13 +209,17 @@ void main()
             float beam     = exp(-0.5 * d * d);
             float scanline = mix(1.0 - u_scanline_intensity, 1.0, beam);
 
-            float lum    = luma(col);
-            float reduce = (1.0 - smoothstep(0.0, 0.45, lum)) * 0.8;
+            vec3 bg_lin  = srgb_to_linear(u_background.rgb);
+            float bg_dist = distance(col, bg_lin);
+            float reduce  = 1.0 - smoothstep(0.0, 0.02, bg_dist);
             col.rgb *= mix(scanline, 1.0, reduce);
         } else {
             // Square wave (retro.hlsl / Windows Terminal style)
+            vec3 bg_lin  = srgb_to_linear(u_background.rgb);
+            float bg_dist = distance(col, bg_lin);
+            float reduce  = 1.0 - smoothstep(0.0, 0.02, bg_dist);
             float wave = 1.0 - mod(floor(frag.y / u_scanline_period), 2.0) * u_scanline_intensity;
-            col.rgb *= wave;
+            col.rgb *= mix(wave, 1.0, reduce);
         }
     }
 
