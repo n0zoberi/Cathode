@@ -1,19 +1,16 @@
 [general]
-# TOML theme imports — merge color tables into the main config.
-# Paths starting with ~/ are expanded to $HOME/.
+# Theme files to import — paths starting with ~/ expand to $HOME/.
 import = [
     "~/.config/cathode/themes/{theme}.toml"
 ]
 
-# Auto-reload config when cathode.toml changes on disk.
-# true (default) = watch file and re-apply settings immediately.
-# false = require restart to pick up config changes.
+# Auto-reload config on file change (default: true).
 auto_reload = true
 
 [terminal]
 scrollback = 2000
 
-# Cursor blink mode: "on", "off", or "system" (follow GTK settings)
+# Cursor blink mode: "on", "off", or "system" (follow GTK).
 # Default: on
 cursor_blink = "on"
 
@@ -29,143 +26,89 @@ family = "monospace"
 # style = "Regular"
 size = 12
 
-# CRT retro effect configuration
-# Set any value to 0 to disable the corresponding effect.
-#
-# Effects are applied in the following pipeline order:
-#   1. Sampling (curvature → jitter → chromatic aberration)
-#   2. Re-sample (softening → color bleed)
-#   3. Additive light (bloom → phosphor glow) — then masked by scanlines
-#   4. Pixel mask (rounding) + CRT mask (scanlines → aperture grille)
-#   5. Screen glass (vignette → depth shadows)
-#   6. Post-mask overlays (glowing line → film grain → flickering)
+# CRT retro effects — set any value to 0 to disable.
 [crt]
-# Scanline mode: 0 = gaussian beam profile (smooth), 1 = square wave (harsh retro)
+# Scanline profile: 0 = gaussian beam (smooth), 1 = square wave (harsh).
 # Default: 0
 # scanline_mode = 0
 
-# Intensity of scanline darkness (0.0 = none, 1.0 = full black)
-# Higher values make alternating pixel rows darker
+# Scanline darkness. (0.0–1.0).
 # Default: 0.12
 scanline_intensity = 0.12
 
-# Number of pixels per scanline group
-# Each group of N rows alternates between bright and dim
+# Pixel rows per scanline group.
 # Default: 6.0
 scanline_period = 6.0
 
-# Bloom — isotropic 2D gaussian blur blended over the image (retro.hlsl style)
-# The terminal content is blurred with a symmetric gaussian kernel and
-# blended back at this strength. Applied before scanlines so the shadow
-# mask attenuates bloom light (matching real CRT physics).
-# Default: 0.30 (matches retro.hlsl / Windows Terminal retro effect)
+# 2D gaussian bloom blend factor (retro.hlsl style). (0.0–1.0).
+# Default: 0.30
 bloom_strength = 0.30
 
-# Bloom blur radius in pixels (gaussian sigma)
-# Higher = wider, softer glow
+# Bloom gaussian sigma — higher = wider glow.
 # Default: 4.5
 bloom_sigma = 4.5
 
-# Phosphor glow strength on bright/saturated text
-# Applied before scanlines (under the mask) like bloom.
+# Warm P22 phosphor glow intensity on bright text.
 # Default: 0.2
 glow_strength = 0.2
 
-# Phosphor glow brightness threshold — lower bound (0.0~1.0)
-# Pixels with luma below this get no glow effect.
-# Lower = more content glows (including dim text).
+# Glow min luma threshold. (0.0–1.0).
 # Default: 0.0
 glow_threshold_low = 0.0
 
-# Phosphor glow brightness threshold — upper bound (0.0~1.0)
-# Pixels with luma above this get full glow effect.
-# Lower = glow saturates at lower brightness.
+# Glow full-strength luma threshold. (0.0–1.0).
 # Default: 1.0
 glow_threshold_high = 1.0
 
-# Aperture grille / shadow mask strength (0.0 = off, 0.005~0.03 = typical)
-# Simulates the vertical RGB stripe structure of Trinitron CRT tubes.
-# Higher values make the RGB pixel grid more visible.
+# Trinitron RGB vertical stripe mask visibility. (0.0–0.03).
 # Default: 0.012
 mask_strength = 0.012
 
-# Screen curvature (0.0 = flat, 0.01~0.08 = typical CRT bulge)
-# Simulates the spherical/cylindrical screen surface of old CRT monitors.
-# Applies a barrel distortion — edges curve inward.
+# Barrel distortion strength for curved screen. (0.0–0.08).
 # Default: 0.0 (off)
 # curvature = 0.03
 
-# Chromatic aberration strength (0.0 = off, 0.0001~0.001 = typical)
-# Simulates RGB beam convergence error at the screen edges.
-# Red and blue channels shift apart near the edges.
+# RGB convergence error at screen edges. (0.0–0.001).
 # Default: 0.0 (off)
 # chromatic_aberration = 0.0005
 
-# Edge softening (0.0 = off, 0.0~0.3 = typical)
-# Sub-pixel gaussian blur that softens harsh pixel edges.
-# Simulates the CRT beam spot spreading across adjacent phosphor dots.
+# Sub-pixel gaussian softening of pixel edges. (0.0–0.3).
 # Default: 0.12
 softening = 0.12
 
-# Color bleed / phosphor trail (0.0 = off, 0.0~0.2 = typical)
-# Horizontal luminance-dependent color smearing with slight rightward bias.
-# Simulates electron beam scan-direction phosphor persistence.
-# Only affects bright content above ~0.2 luma.
+# Horizontal phosphor-trail color smear. (0.0–0.2).
 # Default: 0.08
 color_bleed = 0.08
 
-# Pixel rounding (0.0 = off, 0.0~0.4 = typical)
-# Creates rounded, soft-looking pixels via a 2D gaussian beam spot.
-# Simulates the circular cross-section of CRT electron beams.
-# Applied before scanlines as part of the pixel-level mask stage.
-# Higher values produce more pronounced "dot" appearance.
+# 2D gaussian beam spot — rounded pixel appearance. (0.0–0.4).
 # Default: 0.15
 rounding = 0.15
 
-# Depth shadows (0.0 = off, 0.0~0.3 = typical)
-# Bezel shadow and inner depth darkening toward screen edges.
-# Simulates the CRT glass tube depth and shadow mask frame.
-# Works independently of curvature/vignetting.
+# Bezel shadow + inner depth darkening at edges. (0.0–0.3).
 # Default: 0.10
 shadow_strength = 0.10
 
-# Vignette / glass-depth darkening toward edges (0.0 = off, 0.0~0.5 = typical)
-# Darkens the screen corners to simulate CRT glass depth.
-# Works independently of curvature.
+# Glass-depth corner darkening, independent of curvature. (0.0–0.5).
 # Default: 0.0 (off)
 # vignette_strength = 0.25
 
-# Burn-in / phosphor persistence trail (0.0 = off, 0.0~0.2 = typical)
-# CPU-side temporal frame accumulation (not part of the GLSL pipeline).
-# Bright content leaves a fading trail that smears across nearby pixels.
-# Higher values produce more pronounced ghosting trails.
+# CPU-side phosphor persistence / afterimage ghosting. (0.0–0.2).
 # Default: 0.0 (off)
 burn_in = 0.0
 
-# Film grain / phosphor coating noise (0.0 = off, 0.001~0.01 = typical)
-# Simulates the microscopic irregularity of CRT phosphor coating.
-# Higher values produce more visible noise, especially in dark areas.
+# Phosphor coating noise / grain. (0.0–0.01).
 # Default: 0.005
 film_grain = 0.005
 
-# Electron beam jitter / analog instability (0.0 = off, 0.0~0.01 = typical)
-# Random sub-pixel displacement of the sampling position, simulating the
-# slight electron beam instability of aging CRT monitors.
-# Higher values produce more pronounced "shimmer" / crawling pixels.
+# Random sub-pixel beam jitter (analog instability). (0.0–0.01).
 # Default: 0.0 (off)
 # jitter = 0.005
 
-# Flickering / power supply ripple (0.0 = off, 0.0~0.3 = typical)
-# Modulates screen brightness with noise, simulating AC ripple in the
-# CRT power supply. Creates a subtle pulsing effect.
+# Global brightness modulation (PSU ripple). (0.0–0.3).
 # Default: 0.0 (off)
 # flickering = 0.1
 
-# Glowing line / horizontal scanline bleed (0.0 = off, 0.0~0.5 = typical)
-# A bright horizontal scanline that slowly scrolls down the screen,
-# simulating the capacitive coupling bleed of aging CRT electron beams.
-# Rendered after vignette/shadows as a post-mask overlay (brightness
-# unaffected by screen glass darkening).
+# Scrolling bright horizontal scanline overlay. (0.0–0.5).
 # Default: 0.0 (off)
 # glowing_line = 0.2
 

@@ -210,7 +210,7 @@ void main()
             float scanline = mix(1.0 - u_scanline_intensity, 1.0, beam);
 
             float lum    = luma(col);
-            float reduce = smoothstep(0.0, 0.45, lum) * 0.8;
+            float reduce = (1.0 - smoothstep(0.0, 0.45, lum)) * 0.8;
             col.rgb *= mix(scanline, 1.0, reduce);
         } else {
             // Square wave (retro.hlsl / Windows Terminal style)
