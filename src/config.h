@@ -16,13 +16,10 @@ typedef struct {
     CursorBlinkMode cursor_blink;
 
     char  *shell_program;
-    char **shell_args;
-    int    num_shell_args;
 
     char  *term;
 
     char  *font_family;
-    char  *font_style;
     int    font_size;
 
     int   scanline_mode;          // 0 = gaussian beam, 1 = square wave

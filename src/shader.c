@@ -25,6 +25,35 @@ typedef struct {
     unsigned char *accum_buffer;
     int     accum_w, accum_h;
     double  last_frame_time;
+
+    cairo_surface_t *capture_surface;
+    int     capture_w, capture_h;
+
+    GLuint u_terminal;
+    GLuint u_time;
+    GLuint u_resolution;
+    GLuint u_background;
+    GLuint u_scanline_mode;
+    GLuint u_scanline_intensity;
+    GLuint u_scanline_period;
+    GLuint u_bloom_strength;
+    GLuint u_bloom_sigma;
+    GLuint u_glow_strength;
+    GLuint u_glow_threshold_low;
+    GLuint u_glow_threshold_high;
+    GLuint u_mask_strength;
+    GLuint u_curvature;
+    GLuint u_chromatic_aberration;
+    GLuint u_softening;
+    GLuint u_color_bleed;
+    GLuint u_rounding;
+    GLuint u_shadow_strength;
+    GLuint u_vignette_strength;
+    GLuint u_burn_in;
+    GLuint u_film_grain;
+    GLuint u_jitter;
+    GLuint u_flickering;
+    GLuint u_glowing_line;
 } CathodeShaderState;
 
 static const float quad_vertices[] = {
@@ -145,16 +174,25 @@ capture_terminal(CathodeShaderState *st)
     gtk_widget_snapshot_child(parent, term, snap);
     GskRenderNode *node = gtk_snapshot_free_to_node(snap);
 
-    cairo_surface_t *cs = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
-    cairo_t *cr = cairo_create(cs);
+    if (w != st->capture_w || h != st->capture_h) {
+        if (st->capture_surface)
+            cairo_surface_destroy(st->capture_surface);
+        st->capture_surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
+        st->capture_w = w;
+        st->capture_h = h;
+    }
+    cairo_t *cr = cairo_create(st->capture_surface);
+    cairo_set_operator(cr, CAIRO_OPERATOR_CLEAR);
+    cairo_paint(cr);
+    cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
     gsk_render_node_draw(node, cr);
     cairo_destroy(cr);
     gsk_render_node_unref(node);
 
-    cairo_surface_flush(cs);
+    cairo_surface_flush(st->capture_surface);
 
-    unsigned char *data = cairo_image_surface_get_data(cs);
-    int stride = cairo_image_surface_get_stride(cs);
+    unsigned char *data = cairo_image_surface_get_data(st->capture_surface);
+    int stride = cairo_image_surface_get_stride(st->capture_surface);
 
     // ---- Burn-in / phosphor persistence (CPU-side frame accumulation) ----
     // Accumulates terminal frames with exponential decay so that bright content
@@ -202,20 +240,16 @@ capture_terminal(CathodeShaderState *st)
     GLenum err = glGetError();
     if (err != GL_NO_ERROR)
         g_warning("GL error in capture_terminal: 0x%x", err);
-
-    cairo_surface_destroy(cs);
 }
 
 static void
 upload_retro(CathodeShaderState *st, int w, int h)
 {
     CathodeConfig *c = st->cfg;
-    GLuint p = st->program_retro;
 
-    glUniform1i(glGetUniformLocation(p, "u_terminal"), 0);
-    glUniform1f(glGetUniformLocation(p, "u_time"),
-                (float)g_get_monotonic_time() / 1e6f);
-    glUniform2f(glGetUniformLocation(p, "u_resolution"), (float)w, (float)h);
+    glUniform1i(st->u_terminal, 0);
+    glUniform1f(st->u_time, (float)g_get_monotonic_time() / 1e6f);
+    glUniform2f(st->u_resolution, (float)w, (float)h);
 
     float bg[4] = {0, 0, 0, 1};
     if (c->bg_color) {
@@ -226,50 +260,29 @@ upload_retro(CathodeShaderState *st, int w, int h)
             bg[2] = (float)rgba.blue;
         }
     }
-    glUniform4fv(glGetUniformLocation(p, "u_background"), 1, bg);
+    glUniform4fv(st->u_background, 1, bg);
 
-    glUniform1i(glGetUniformLocation(p, "u_scanline_mode"),
-                c->scanline_mode);
-    glUniform1f(glGetUniformLocation(p, "u_scanline_intensity"),
-                c->scanline_intensity);
-    glUniform1f(glGetUniformLocation(p, "u_scanline_period"),
-                (float)c->scanline_period);
-    glUniform1f(glGetUniformLocation(p, "u_bloom_strength"),
-                c->bloom_strength);
-    glUniform1f(glGetUniformLocation(p, "u_bloom_sigma"),
-                c->bloom_sigma);
-    glUniform1f(glGetUniformLocation(p, "u_glow_strength"),
-                c->glow_strength);
-    glUniform1f(glGetUniformLocation(p, "u_glow_threshold_low"),
-                c->glow_threshold_low);
-    glUniform1f(glGetUniformLocation(p, "u_glow_threshold_high"),
-                c->glow_threshold_high);
-    glUniform1f(glGetUniformLocation(p, "u_mask_strength"),
-                c->mask_strength);
-    glUniform1f(glGetUniformLocation(p, "u_curvature"),
-                c->curvature);
-    glUniform1f(glGetUniformLocation(p, "u_chromatic_aberration"),
-                c->chromatic_aberration);
-    glUniform1f(glGetUniformLocation(p, "u_softening"),
-                c->softening);
-    glUniform1f(glGetUniformLocation(p, "u_color_bleed"),
-                c->color_bleed);
-    glUniform1f(glGetUniformLocation(p, "u_rounding"),
-                c->rounding);
-    glUniform1f(glGetUniformLocation(p, "u_shadow_strength"),
-                c->shadow_strength);
-    glUniform1f(glGetUniformLocation(p, "u_vignette_strength"),
-                c->vignette_strength);
-    glUniform1f(glGetUniformLocation(p, "u_burn_in"),
-                c->burn_in);
-    glUniform1f(glGetUniformLocation(p, "u_film_grain"),
-                c->film_grain);
-    glUniform1f(glGetUniformLocation(p, "u_jitter"),
-                c->jitter);
-    glUniform1f(glGetUniformLocation(p, "u_flickering"),
-                c->flickering);
-    glUniform1f(glGetUniformLocation(p, "u_glowing_line"),
-                c->glowing_line);
+    glUniform1i(st->u_scanline_mode, c->scanline_mode);
+    glUniform1f(st->u_scanline_intensity, c->scanline_intensity);
+    glUniform1f(st->u_scanline_period, (float)c->scanline_period);
+    glUniform1f(st->u_bloom_strength, c->bloom_strength);
+    glUniform1f(st->u_bloom_sigma, c->bloom_sigma);
+    glUniform1f(st->u_glow_strength, c->glow_strength);
+    glUniform1f(st->u_glow_threshold_low, c->glow_threshold_low);
+    glUniform1f(st->u_glow_threshold_high, c->glow_threshold_high);
+    glUniform1f(st->u_mask_strength, c->mask_strength);
+    glUniform1f(st->u_curvature, c->curvature);
+    glUniform1f(st->u_chromatic_aberration, c->chromatic_aberration);
+    glUniform1f(st->u_softening, c->softening);
+    glUniform1f(st->u_color_bleed, c->color_bleed);
+    glUniform1f(st->u_rounding, c->rounding);
+    glUniform1f(st->u_shadow_strength, c->shadow_strength);
+    glUniform1f(st->u_vignette_strength, c->vignette_strength);
+    glUniform1f(st->u_burn_in, c->burn_in);
+    glUniform1f(st->u_film_grain, c->film_grain);
+    glUniform1f(st->u_jitter, c->jitter);
+    glUniform1f(st->u_flickering, c->flickering);
+    glUniform1f(st->u_glowing_line, c->glowing_line);
 }
 
 static gboolean
@@ -374,6 +387,35 @@ realize_cb(GtkGLArea *area, gpointer data)
     glEnableVertexAttribArray(1);
 
     glBindVertexArray(0);
+
+#   define CACHE_UNIFORM(name) st->u_##name = glGetUniformLocation(st->program_retro, "u_" #name)
+    CACHE_UNIFORM(terminal);
+    CACHE_UNIFORM(time);
+    CACHE_UNIFORM(resolution);
+    CACHE_UNIFORM(background);
+    CACHE_UNIFORM(scanline_mode);
+    CACHE_UNIFORM(scanline_intensity);
+    CACHE_UNIFORM(scanline_period);
+    CACHE_UNIFORM(bloom_strength);
+    CACHE_UNIFORM(bloom_sigma);
+    CACHE_UNIFORM(glow_strength);
+    CACHE_UNIFORM(glow_threshold_low);
+    CACHE_UNIFORM(glow_threshold_high);
+    CACHE_UNIFORM(mask_strength);
+    CACHE_UNIFORM(curvature);
+    CACHE_UNIFORM(chromatic_aberration);
+    CACHE_UNIFORM(softening);
+    CACHE_UNIFORM(color_bleed);
+    CACHE_UNIFORM(rounding);
+    CACHE_UNIFORM(shadow_strength);
+    CACHE_UNIFORM(vignette_strength);
+    CACHE_UNIFORM(burn_in);
+    CACHE_UNIFORM(film_grain);
+    CACHE_UNIFORM(jitter);
+    CACHE_UNIFORM(flickering);
+    CACHE_UNIFORM(glowing_line);
+#   undef CACHE_UNIFORM
+
     st->initialized = true;
 
     st->tick_id = gtk_widget_add_tick_callback(GTK_WIDGET(area),
@@ -418,6 +460,8 @@ shader_state_free(gpointer data)
     CathodeShaderState *st = data;
     if (st->redraw_idle_id)
         g_source_remove(st->redraw_idle_id);
+    if (st->capture_surface)
+        cairo_surface_destroy(st->capture_surface);
     g_free(st->accum_buffer);
     g_free(st);
 }

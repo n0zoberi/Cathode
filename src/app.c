@@ -1,25 +1,12 @@
 #include "app.h"
 #include "config.h"
 #include "tab.h"
-#include "terminal.h"
 #include <glib/gi18n.h>
 
-static CathodeConfig *app_config = NULL;
-static GFileMonitor  *config_monitor = NULL;
-static guint          reload_debounce_id = 0;
-
-static VteTerminal *
-get_current_terminal(void)
-{
-    AdwTabPage *page = cathode_tab_get_selected_page();
-    if (!page) return NULL;
-
-    GtkWidget *overlay = adw_tab_page_get_child(page);
-    GtkWidget *first = gtk_widget_get_first_child(overlay);
-    if (first && VTE_IS_TERMINAL(first))
-        return VTE_TERMINAL(first);
-    return NULL;
-}
+static CathodeConfig   *app_config = NULL;
+static CathodeTabState *tab_state = NULL;
+static GFileMonitor    *config_monitor = NULL;
+static guint            reload_debounce_id = 0;
 
 static void
 on_copy(GSimpleAction *action, GVariant *param, gpointer data)
@@ -27,7 +14,7 @@ on_copy(GSimpleAction *action, GVariant *param, gpointer data)
     (void)action;
     (void)param;
     (void)data;
-    VteTerminal *term = get_current_terminal();
+    VteTerminal *term = cathode_tab_get_current_terminal(tab_state);
     if (term)
         vte_terminal_copy_clipboard_format(term, VTE_FORMAT_TEXT);
 }
@@ -38,7 +25,7 @@ on_paste(GSimpleAction *action, GVariant *param, gpointer data)
     (void)action;
     (void)param;
     (void)data;
-    VteTerminal *term = get_current_terminal();
+    VteTerminal *term = cathode_tab_get_current_terminal(tab_state);
     if (term)
         vte_terminal_paste_clipboard(term);
 }
@@ -49,7 +36,7 @@ on_new_tab(GSimpleAction *action, GVariant *param, gpointer data)
     (void)action;
     (void)param;
     (void)data;
-    cathode_tab_new_tab();
+    cathode_tab_new_tab(tab_state);
 }
 
 static void
@@ -58,7 +45,7 @@ on_close_tab(GSimpleAction *action, GVariant *param, gpointer data)
     (void)action;
     (void)param;
     (void)data;
-    cathode_tab_close_current();
+    cathode_tab_close_current(tab_state);
 }
 
 static void
@@ -67,7 +54,7 @@ on_toggle_search(GSimpleAction *action, GVariant *param, gpointer data)
     (void)action;
     (void)param;
     (void)data;
-    cathode_tab_toggle_search();
+    cathode_tab_toggle_search(tab_state);
 }
 
 static void
@@ -76,7 +63,7 @@ on_rename_tab(GSimpleAction *action, GVariant *param, gpointer data)
     (void)action;
     (void)param;
     (void)data;
-    cathode_tab_rename_current();
+    cathode_tab_rename_current(tab_state);
 }
 
 static void
@@ -85,7 +72,7 @@ on_clear_screen(GSimpleAction *action, GVariant *param, gpointer data)
     (void)action;
     (void)param;
     (void)data;
-    VteTerminal *term = get_current_terminal();
+    VteTerminal *term = cathode_tab_get_current_terminal(tab_state);
     if (term)
         vte_terminal_reset(term, TRUE, FALSE);
 }
@@ -96,7 +83,7 @@ on_reset_terminal(GSimpleAction *action, GVariant *param, gpointer data)
     (void)action;
     (void)param;
     (void)data;
-    VteTerminal *term = get_current_terminal();
+    VteTerminal *term = cathode_tab_get_current_terminal(tab_state);
     if (term)
         vte_terminal_reset(term, TRUE, TRUE);
 }
@@ -106,7 +93,6 @@ on_open_config(GSimpleAction *action, GVariant *param, gpointer data)
 {
     (void)action;
     (void)param;
-    (void)data;
     GtkWindow *window = GTK_WINDOW(data);
     char *path = g_build_filename(g_get_user_config_dir(), "cathode", "cathode.toml", NULL);
     GFile *file = g_file_new_for_path(path);
@@ -133,7 +119,7 @@ on_increase_font(GSimpleAction *action, GVariant *param, gpointer data)
     (void)data;
     if (app_config->font_size < 72)
         app_config->font_size++;
-    cathode_tab_reapply_font(app_config);
+    cathode_tab_reapply_font(tab_state, app_config);
 }
 
 static void
@@ -144,7 +130,7 @@ on_decrease_font(GSimpleAction *action, GVariant *param, gpointer data)
     (void)data;
     if (app_config->font_size > 4)
         app_config->font_size--;
-    cathode_tab_reapply_font(app_config);
+    cathode_tab_reapply_font(tab_state, app_config);
 }
 
 static void
@@ -154,18 +140,18 @@ on_reset_font(GSimpleAction *action, GVariant *param, gpointer data)
     (void)param;
     (void)data;
     app_config->font_size = 11;
-    cathode_tab_reapply_font(app_config);
+    cathode_tab_reapply_font(tab_state, app_config);
 }
 
-static bool closing_confirmed = false;
-
 static void
-on_dialog_response(AdwAlertDialog *_dialog, const char *response, GtkWindow *window)
+on_dialog_response(AdwAlertDialog *_dialog, const char *response,
+                   gpointer data)
 {
     (void)_dialog;
+    (void)data;
     if (g_strcmp0(response, "ok") == 0) {
-        closing_confirmed = true;
-        gtk_window_destroy(window);
+        tab_state->closing_confirmed = true;
+        gtk_window_destroy(tab_state->win);
     }
 }
 
@@ -174,10 +160,10 @@ on_close_request(GtkWindow *window, gpointer data)
 {
     (void)data;
 
-    if (closing_confirmed)
+    if (tab_state->closing_confirmed)
         return FALSE;
 
-    int n = cathode_tab_get_n_pages();
+    int n = cathode_tab_get_n_pages(tab_state);
     if (n <= 1)
         return FALSE;
 
@@ -194,7 +180,7 @@ on_close_request(GtkWindow *window, gpointer data)
     adw_alert_dialog_set_close_response(dialog, "cancel");
 
     g_signal_connect(dialog, "response",
-                     G_CALLBACK(on_dialog_response), window);
+                     G_CALLBACK(on_dialog_response), NULL);
 
     adw_dialog_present(ADW_DIALOG(dialog), GTK_WIDGET(window));
 
@@ -266,10 +252,10 @@ on_activate(GtkApplication *app, gpointer user_data)
         g_ptr_array_free(arr, TRUE);
     }
 
-    GtkWidget *tab_content = cathode_tab_view_new(app_config,
-                                                   GTK_WINDOW(window));
+    tab_state = cathode_tab_view_new(app_config, GTK_WINDOW(window));
+
     adw_application_window_set_content(ADW_APPLICATION_WINDOW(window),
-                                        tab_content);
+                                        tab_state->toolbar);
 
     g_signal_connect(window, "close-request",
                      G_CALLBACK(on_close_request), NULL);
@@ -286,7 +272,7 @@ reload_config_cb(gpointer data)
     reload_debounce_id = 0;
     g_message("Config file changed, reloading...");
     cathode_config_reload(app_config);
-    cathode_tab_reapply_config(app_config);
+    cathode_tab_reapply_config(tab_state, app_config);
     return G_SOURCE_REMOVE;
 }
 

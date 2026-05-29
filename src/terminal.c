@@ -13,17 +13,8 @@ on_terminal_realize(GtkWidget *widget, gpointer data)
     struct _CathodeTerminalRealizeData *rdata = data;
     VteTerminal *term = VTE_TERMINAL(widget);
 
-    switch (rdata->cfg->cursor_blink) {
-    case CURSOR_BLINK_OFF:
-        vte_terminal_set_cursor_blink_mode(term, VTE_CURSOR_BLINK_OFF);
-        break;
-    case CURSOR_BLINK_SYSTEM:
-        vte_terminal_set_cursor_blink_mode(term, VTE_CURSOR_BLINK_SYSTEM);
-        break;
-    default:
-        vte_terminal_set_cursor_blink_mode(term, VTE_CURSOR_BLINK_ON);
-        break;
-    }
+    vte_terminal_set_cursor_blink_mode(term,
+        cathode_cursor_blink_to_vte(rdata->cfg->cursor_blink));
 
     g_signal_handlers_disconnect_by_func(widget,
         G_CALLBACK(on_terminal_realize), data);
@@ -53,23 +44,9 @@ cathode_terminal_apply_config(VteTerminal *term, CathodeConfig *cfg)
     vte_terminal_set_mouse_autohide(term, TRUE);
     vte_terminal_set_allow_hyperlink(term, TRUE);
 
-    char *font_str = g_strdup_printf("%s %d", cfg->font_family, cfg->font_size);
-    PangoFontDescription *font = pango_font_description_from_string(font_str);
-    vte_terminal_set_font(term, font);
-    pango_font_description_free(font);
-    g_free(font_str);
-
-    switch (cfg->cursor_blink) {
-    case CURSOR_BLINK_OFF:
-        vte_terminal_set_cursor_blink_mode(term, VTE_CURSOR_BLINK_OFF);
-        break;
-    case CURSOR_BLINK_SYSTEM:
-        vte_terminal_set_cursor_blink_mode(term, VTE_CURSOR_BLINK_SYSTEM);
-        break;
-    default:
-        vte_terminal_set_cursor_blink_mode(term, VTE_CURSOR_BLINK_ON);
-        break;
-    }
+    cathode_terminal_apply_font(term, cfg);
+    vte_terminal_set_cursor_blink_mode(term,
+        cathode_cursor_blink_to_vte(cfg->cursor_blink));
 
     GdkRGBA rgba;
     if (cfg->fg_color && gdk_rgba_parse(&rgba, cfg->fg_color))
@@ -80,6 +57,9 @@ cathode_terminal_apply_config(VteTerminal *term, CathodeConfig *cfg)
 
     if (cfg->cursor_color && gdk_rgba_parse(&rgba, cfg->cursor_color))
         vte_terminal_set_color_cursor(term, &rgba);
+
+    if (cfg->selection_bg && gdk_rgba_parse(&rgba, cfg->selection_bg))
+        vte_terminal_set_color_highlight(term, &rgba);
 
     if (cfg->palette_set) {
         GdkRGBA palette[16];
@@ -92,6 +72,26 @@ cathode_terminal_apply_config(VteTerminal *term, CathodeConfig *cfg)
         }
         if (has_palette)
             vte_terminal_set_colors(term, NULL, NULL, palette, 16);
+    }
+}
+
+void
+cathode_terminal_apply_font(VteTerminal *term, CathodeConfig *cfg)
+{
+    char *str = g_strdup_printf("%s %d", cfg->font_family, cfg->font_size);
+    PangoFontDescription *font = pango_font_description_from_string(str);
+    vte_terminal_set_font(term, font);
+    pango_font_description_free(font);
+    g_free(str);
+}
+
+VteCursorBlinkMode
+cathode_cursor_blink_to_vte(CursorBlinkMode mode)
+{
+    switch (mode) {
+    case CURSOR_BLINK_OFF:    return VTE_CURSOR_BLINK_OFF;
+    case CURSOR_BLINK_SYSTEM: return VTE_CURSOR_BLINK_SYSTEM;
+    default:                  return VTE_CURSOR_BLINK_ON;
     }
 }
 

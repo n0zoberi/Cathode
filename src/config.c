@@ -115,9 +115,6 @@ parse_font(toml_table_t *root, CathodeConfig *cfg)
     d = toml_string_in(t, "family");
     if (d.ok) { set_str(&cfg->font_family, d.u.s); free(d.u.s); }
 
-    d = toml_string_in(t, "style");
-    if (d.ok) { set_str(&cfg->font_style, d.u.s); free(d.u.s); }
-
     d = toml_int_in(t, "size");
     if (d.ok) cfg->font_size = (int)d.u.i;
 }
@@ -285,8 +282,8 @@ cathode_config_load(void)
 
     FILE *fp = fopen(config_path, "r");
     if (!fp) {
-        g_free((char *)config_path);
         g_message("No config at %s, using defaults", config_path);
+        g_free((char *)config_path);
         return cfg;
     }
 
@@ -326,51 +323,59 @@ cathode_config_load(void)
     return cfg;
 }
 
+#define RELOAD_SCALAR(field) cfg->field = fresh->field
+#define RELOAD_STR(field)    set_str(&cfg->field, fresh->field)
+
 void
 cathode_config_reload(CathodeConfig *cfg)
 {
     CathodeConfig *fresh = cathode_config_load();
+    if (!fresh) return;
 
-    cfg->scrollback        = fresh->scrollback;
-    cfg->cursor_blink      = fresh->cursor_blink;
-    cfg->font_size         = fresh->font_size;
-    cfg->auto_reload       = fresh->auto_reload;
+    RELOAD_SCALAR(scrollback);
+    RELOAD_SCALAR(cursor_blink);
+    RELOAD_SCALAR(font_size);
+    RELOAD_SCALAR(auto_reload);
+    RELOAD_SCALAR(palette_set);
 
-    cfg->scanline_mode       = fresh->scanline_mode;
-    cfg->scanline_intensity  = fresh->scanline_intensity;
-    cfg->scanline_period     = fresh->scanline_period;
-    cfg->bloom_strength      = fresh->bloom_strength;
-    cfg->bloom_sigma         = fresh->bloom_sigma;
-    cfg->glow_strength       = fresh->glow_strength;
-    cfg->glow_threshold_low  = fresh->glow_threshold_low;
-    cfg->glow_threshold_high = fresh->glow_threshold_high;
-    cfg->mask_strength       = fresh->mask_strength;
-    cfg->curvature           = fresh->curvature;
-    cfg->chromatic_aberration = fresh->chromatic_aberration;
-    cfg->softening           = fresh->softening;
-    cfg->color_bleed         = fresh->color_bleed;
-    cfg->rounding            = fresh->rounding;
-    cfg->shadow_strength     = fresh->shadow_strength;
-    cfg->vignette_strength   = fresh->vignette_strength;
-    cfg->burn_in             = fresh->burn_in;
-    cfg->film_grain          = fresh->film_grain;
-    cfg->jitter              = fresh->jitter;
-    cfg->flickering          = fresh->flickering;
-    cfg->glowing_line        = fresh->glowing_line;
+    RELOAD_SCALAR(scanline_mode);
+    RELOAD_SCALAR(scanline_intensity);
+    RELOAD_SCALAR(scanline_period);
+    RELOAD_SCALAR(bloom_strength);
+    RELOAD_SCALAR(bloom_sigma);
+    RELOAD_SCALAR(glow_strength);
+    RELOAD_SCALAR(glow_threshold_low);
+    RELOAD_SCALAR(glow_threshold_high);
+    RELOAD_SCALAR(mask_strength);
+    RELOAD_SCALAR(curvature);
+    RELOAD_SCALAR(chromatic_aberration);
+    RELOAD_SCALAR(softening);
+    RELOAD_SCALAR(color_bleed);
+    RELOAD_SCALAR(rounding);
+    RELOAD_SCALAR(shadow_strength);
+    RELOAD_SCALAR(vignette_strength);
+    RELOAD_SCALAR(burn_in);
+    RELOAD_SCALAR(film_grain);
+    RELOAD_SCALAR(jitter);
+    RELOAD_SCALAR(flickering);
+    RELOAD_SCALAR(glowing_line);
 
-    set_str(&cfg->font_family,   fresh->font_family);
-    set_str(&cfg->font_style,    fresh->font_style);
-    set_str(&cfg->fg_color,      fresh->fg_color);
-    set_str(&cfg->bg_color,      fresh->bg_color);
-    set_str(&cfg->cursor_color,  fresh->cursor_color);
-    set_str(&cfg->selection_bg,  fresh->selection_bg);
+    RELOAD_STR(shell_program);
+    RELOAD_STR(term);
+    RELOAD_STR(font_family);
+    RELOAD_STR(fg_color);
+    RELOAD_STR(bg_color);
+    RELOAD_STR(cursor_color);
+    RELOAD_STR(selection_bg);
 
     for (int i = 0; i < 16; i++)
-        set_str(&cfg->palette[i], fresh->palette[i]);
-    cfg->palette_set = fresh->palette_set;
+        RELOAD_STR(palette[i]);
 
     cathode_config_free(fresh);
 }
+
+#undef RELOAD_SCALAR
+#undef RELOAD_STR
 
 void
 cathode_config_free(CathodeConfig *cfg)
@@ -382,16 +387,8 @@ cathode_config_free(CathodeConfig *cfg)
     g_free(cfg->imports);
 
     g_free(cfg->shell_program);
-
-    if (cfg->shell_args) {
-        for (int i = 0; i < cfg->num_shell_args; i++)
-            g_free(cfg->shell_args[i]);
-        g_free(cfg->shell_args);
-    }
-
     g_free(cfg->term);
     g_free(cfg->font_family);
-    g_free(cfg->font_style);
     g_free(cfg->fg_color);
     g_free(cfg->bg_color);
     g_free(cfg->cursor_color);
