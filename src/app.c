@@ -324,7 +324,7 @@ cathode_app_run(int argc, char *argv[])
     app_config = cathode_config_load();
     setup_config_monitor();
 
-    GtkApplication *app = gtk_application_new("com.n0zoberi.Cathode",
+    AdwApplication *app = adw_application_new("com.n0zoberi.Cathode",
         G_APPLICATION_DEFAULT_FLAGS);
 
     g_signal_connect(app, "activate", G_CALLBACK(on_activate), NULL);
