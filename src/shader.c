@@ -452,6 +452,11 @@ unrealize_cb(GtkGLArea *area, gpointer data)
 
     delete_tex(st);
     st->initialized = false;
+
+    if (st->terminal) {
+        g_signal_handlers_disconnect_by_data(G_OBJECT(st->terminal), st);
+        st->terminal = NULL;
+    }
 }
 
 static void

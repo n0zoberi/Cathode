@@ -191,6 +191,12 @@ static void
 on_window_destroy(GtkWindow *_window, GtkApplication *app)
 {
     (void)_window;
+    if (reload_debounce_id) {
+        g_source_remove(reload_debounce_id);
+        reload_debounce_id = 0;
+    }
+    tab_state->view = NULL;
+    tab_state->win = NULL;
     GList *windows = gtk_application_get_windows(app);
     if (g_list_length(windows) <= 1)
         g_application_quit(G_APPLICATION(app));

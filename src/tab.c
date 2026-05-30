@@ -23,7 +23,7 @@ update_window_title(CathodeTabState *state)
     if (page) {
         VteTerminal *term = get_terminal_from_page(page);
         if (term)
-            title = vte_terminal_get_window_title(term);
+            title = vte_terminal_get_termprop_string(term, VTE_TERMPROP_XTERM_TITLE, NULL);
     }
     const char *final_title = title && *title ? title : "Cathode";
     gtk_window_set_title(state->win, final_title);
@@ -36,7 +36,7 @@ on_title_changed(VteTerminal *term, gpointer data)
 {
     CathodeTabState *state = data;
     AdwTabPage *page = g_object_get_data(G_OBJECT(term), "page");
-    const char *title = vte_terminal_get_window_title(term);
+    const char *title = vte_terminal_get_termprop_string(term, VTE_TERMPROP_XTERM_TITLE, NULL);
     adw_tab_page_set_title(page,
                            title && *title ? title : "Cathode");
     update_window_title(state);
@@ -47,18 +47,25 @@ on_child_exited(VteTerminal *term, int status, gpointer data)
 {
     (void)status;
     CathodeTabState *state = data;
+    if (g_object_get_data(G_OBJECT(term), "closing"))
+        return;
     AdwTabPage *page = g_object_get_data(G_OBJECT(term), "page");
-    if (adw_tab_page_get_child(page))
+    if (page && adw_tab_page_get_child(page))
         adw_tab_view_close_page(state->view, page);
 }
 
-static void
+static gboolean
 on_close_page(AdwTabView *v, AdwTabPage *page, gpointer data)
 {
     CathodeTabState *state = data;
+    VteTerminal *term = get_terminal_from_page(page);
+    if (term)
+        g_object_set_data(G_OBJECT(term), "closing", GINT_TO_POINTER(1));
     adw_tab_view_close_page_finish(v, page, TRUE);
     if (adw_tab_view_get_n_pages(v) == 0 && state->win)
         gtk_window_close(state->win);
+    state->prev_page = NULL;
+    return TRUE;
 }
 
 static GtkWidget *
@@ -87,7 +94,7 @@ on_page_attached(AdwTabView *v, AdwTabPage *page, int pos, gpointer data)
     g_signal_connect(term, "child-exited",
                      G_CALLBACK(on_child_exited), state);
 
-    const char *title = vte_terminal_get_window_title(term);
+    const char *title = vte_terminal_get_termprop_string(term, VTE_TERMPROP_XTERM_TITLE, NULL);
     adw_tab_page_set_title(page, title && *title ? title : "Cathode");
 }
 
@@ -101,6 +108,8 @@ on_selected_page_changed(AdwTabView *v, GParamSpec *pspec, gpointer data)
     AdwTabPage *page = adw_tab_view_get_selected_page(state->view);
     if (page == state->prev_page) return;
     state->prev_page = page;
+
+    if (!page) return;
 
     VteTerminal *term = get_terminal_from_page(page);
     cathode_search_set_terminal(state->search_widget, term);
@@ -261,6 +270,7 @@ cathode_tab_rename_current(CathodeTabState *state)
 void
 cathode_tab_new_tab(CathodeTabState *state)
 {
+    if (!state->view) return;
     GtkWidget *content = create_tab(state->cfg);
     adw_tab_view_append(state->view, content);
     int n = adw_tab_view_get_n_pages(state->view);
@@ -271,6 +281,7 @@ cathode_tab_new_tab(CathodeTabState *state)
 void
 cathode_tab_close_current(CathodeTabState *state)
 {
+    if (!state->view) return;
     AdwTabPage *page = adw_tab_view_get_selected_page(state->view);
     if (page)
         adw_tab_view_close_page(state->view, page);
@@ -279,12 +290,14 @@ cathode_tab_close_current(CathodeTabState *state)
 void
 cathode_tab_toggle_search(CathodeTabState *state)
 {
+    if (!state->view) return;
     cathode_search_toggle(state->search_widget);
 }
 
 void
 cathode_tab_reapply_font(CathodeTabState *state, CathodeConfig *c)
 {
+    if (!state->view) return;
     int n = adw_tab_view_get_n_pages(state->view);
     for (int i = 0; i < n; i++) {
         AdwTabPage *page = adw_tab_view_get_nth_page(state->view, i);
@@ -298,6 +311,7 @@ cathode_tab_reapply_font(CathodeTabState *state, CathodeConfig *c)
 void
 cathode_tab_reapply_config(CathodeTabState *state, CathodeConfig *c)
 {
+    if (!state->view) return;
     int n = adw_tab_view_get_n_pages(state->view);
     for (int i = 0; i < n; i++) {
         AdwTabPage *page = adw_tab_view_get_nth_page(state->view, i);
@@ -313,18 +327,21 @@ cathode_tab_reapply_config(CathodeTabState *state, CathodeConfig *c)
 int
 cathode_tab_get_n_pages(CathodeTabState *state)
 {
+    if (!state->view) return 0;
     return adw_tab_view_get_n_pages(state->view);
 }
 
 AdwTabPage *
 cathode_tab_get_selected_page(CathodeTabState *state)
 {
+    if (!state->view) return NULL;
     return adw_tab_view_get_selected_page(state->view);
 }
 
 VteTerminal *
 cathode_tab_get_current_terminal(CathodeTabState *state)
 {
+    if (!state->view) return NULL;
     AdwTabPage *page = adw_tab_view_get_selected_page(state->view);
     if (!page) return NULL;
     return get_terminal_from_page(page);
