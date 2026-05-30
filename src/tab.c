@@ -331,13 +331,6 @@ cathode_tab_get_n_pages(CathodeTabState *state)
     return adw_tab_view_get_n_pages(state->view);
 }
 
-AdwTabPage *
-cathode_tab_get_selected_page(CathodeTabState *state)
-{
-    if (!state->view) return NULL;
-    return adw_tab_view_get_selected_page(state->view);
-}
-
 VteTerminal *
 cathode_tab_get_current_terminal(CathodeTabState *state)
 {

@@ -94,7 +94,7 @@ on_open_config(GSimpleAction *action, GVariant *param, gpointer data)
     (void)action;
     (void)param;
     GtkWindow *window = GTK_WINDOW(data);
-    char *path = g_build_filename(g_get_user_config_dir(), "cathode", "cathode.toml", NULL);
+    g_autofree char *path = cathode_config_path();
     GFile *file = g_file_new_for_path(path);
     GtkFileLauncher *launcher = gtk_file_launcher_new(file);
     gtk_file_launcher_launch(launcher, window, NULL, NULL, NULL);
@@ -307,10 +307,8 @@ on_config_changed(GFileMonitor *monitor, GFile *file,
 static void
 setup_config_monitor(void)
 {
-    const char *path = g_build_filename(
-        g_get_user_config_dir(), "cathode", "cathode.toml", NULL);
+    g_autofree char *path = cathode_config_path();
     GFile *file = g_file_new_for_path(path);
-    g_free((char *)path);
 
     GError *err = NULL;
     config_monitor = g_file_monitor_file(file, G_FILE_MONITOR_NONE, NULL, &err);

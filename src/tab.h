@@ -26,5 +26,4 @@ void             cathode_tab_reapply_font(CathodeTabState *state, CathodeConfig 
 void             cathode_tab_reapply_config(CathodeTabState *state, CathodeConfig *cfg);
 
 int              cathode_tab_get_n_pages(CathodeTabState *state);
-AdwTabPage      *cathode_tab_get_selected_page(CathodeTabState *state);
 VteTerminal     *cathode_tab_get_current_terminal(CathodeTabState *state);

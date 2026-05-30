@@ -55,10 +55,10 @@ vec3 linear_to_srgb(vec3 c)
                greaterThan(c, vec3(0.0031308)));
 }
 
-vec2 barrel(vec2 uv, float k, out float dist_sq)
+vec2 barrel(vec2 uv, float k)
 {
     vec2 c = uv * 2.0 - 1.0;
-    dist_sq = dot(c, c);
+    float dist_sq = dot(c, c);
     return uv + c * k * dist_sq;
 }
 
@@ -77,7 +77,7 @@ void main()
 
     // ---- Screen curvature (barrel distortion) ----
     if (u_curvature > 0.0001) {
-        uv = barrel(uv, u_curvature, dist_sq);
+        uv = barrel(uv, u_curvature);
         centered = uv * 2.0 - 1.0;
         dist_sq = dot(centered, centered);
         if (uv.x < -0.04 || uv.x > 1.04 ||

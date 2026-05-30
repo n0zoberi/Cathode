@@ -5,6 +5,12 @@
 #include <stdio.h>
 #include <glib.h>
 
+char *
+cathode_config_path(void)
+{
+    return g_build_filename(g_get_user_config_dir(), "cathode", "cathode.toml", NULL);
+}
+
 static void
 set_str(char **dest, const char *src)
 {
@@ -277,13 +283,12 @@ cathode_config_load(void)
 {
     CathodeConfig *cfg = cathode_config_default();
 
-    const char *config_path = g_build_filename(
-        g_get_user_config_dir(), "cathode", "cathode.toml", NULL);
+    char *config_path = cathode_config_path();
 
     FILE *fp = fopen(config_path, "r");
     if (!fp) {
         g_message("No config at %s, using defaults", config_path);
-        g_free((char *)config_path);
+        g_free(config_path);
         return cfg;
     }
 
@@ -292,7 +297,7 @@ cathode_config_load(void)
     fclose(fp);
 
     if (!root) {
-        g_free((char *)config_path);
+        g_free(config_path);
         g_warning("Config parse error: %s", errbuf);
         return cfg;
     }
@@ -319,7 +324,7 @@ cathode_config_load(void)
         }
     }
 
-    g_free((char *)config_path);
+    g_free(config_path);
     return cfg;
 }
 

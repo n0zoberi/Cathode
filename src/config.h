@@ -54,6 +54,7 @@ typedef struct {
     bool   palette_set;
 } CathodeConfig;
 
+char          *cathode_config_path(void);
 CathodeConfig *cathode_config_load(void);
 CathodeConfig *cathode_config_default(void);
 void           cathode_config_free(CathodeConfig *cfg);

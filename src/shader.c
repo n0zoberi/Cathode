@@ -289,7 +289,6 @@ static gboolean
 render_cb(GtkGLArea *area, GdkGLContext *_ctx, gpointer data)
 {
     (void)_ctx;
-    (void)area;
     CathodeShaderState *st = data;
 
     if (!st->initialized) return FALSE;
@@ -569,18 +568,21 @@ cathode_shader_is_effect_active(CathodeConfig *cfg)
            cfg->glowing_line         > 0.001f;
 }
 
+static CathodeShaderState *
+get_shader_state_from_overlay(GtkWidget *overlay)
+{
+    for (GtkWidget *child = gtk_widget_get_first_child(overlay); child;
+         child = gtk_widget_get_next_sibling(child)) {
+        if (GTK_IS_GL_AREA(child))
+            return g_object_get_data(G_OBJECT(child), "cathode-shader");
+    }
+    return NULL;
+}
+
 void
 cathode_shader_queue_redraw(GtkWidget *overlay)
 {
-    CathodeShaderState *st = NULL;
-    GtkWidget *child = gtk_widget_get_first_child(overlay);
-    while (child) {
-        if (GTK_IS_GL_AREA(child)) {
-            st = g_object_get_data(G_OBJECT(child), "cathode-shader");
-            break;
-        }
-        child = gtk_widget_get_next_sibling(child);
-    }
+    CathodeShaderState *st = get_shader_state_from_overlay(overlay);
     if (st)
         queue_redraw_idle(st);
 }
@@ -588,15 +590,7 @@ cathode_shader_queue_redraw(GtkWidget *overlay)
 void
 cathode_shader_refresh_visible(GtkWidget *overlay)
 {
-    CathodeShaderState *st = NULL;
-    GtkWidget *child = gtk_widget_get_first_child(overlay);
-    while (child) {
-        if (GTK_IS_GL_AREA(child)) {
-            st = g_object_get_data(G_OBJECT(child), "cathode-shader");
-            break;
-        }
-        child = gtk_widget_get_next_sibling(child);
-    }
+    CathodeShaderState *st = get_shader_state_from_overlay(overlay);
     if (!st) return;
 
     bool active = cathode_shader_is_effect_active(st->cfg);

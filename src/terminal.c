@@ -3,7 +3,6 @@
 #include <string.h>
 
 struct _CathodeTerminalRealizeData {
-    VteTerminal     *term;
     CathodeConfig   *cfg;
 };
 
@@ -28,7 +27,6 @@ cathode_terminal_new(CathodeConfig *cfg)
     cathode_terminal_apply_config(term, cfg);
 
     struct _CathodeTerminalRealizeData *rdata = g_new(struct _CathodeTerminalRealizeData, 1);
-    rdata->term = term;
     rdata->cfg  = cfg;
     g_signal_connect(GTK_WIDGET(term), "realize",
                      G_CALLBACK(on_terminal_realize), rdata);
@@ -63,15 +61,11 @@ cathode_terminal_apply_config(VteTerminal *term, CathodeConfig *cfg)
 
     if (cfg->palette_set) {
         GdkRGBA palette[16];
-        bool has_palette = false;
         for (int i = 0; i < 16; i++) {
-            if (cfg->palette[i] && gdk_rgba_parse(&palette[i], cfg->palette[i]))
-                has_palette = true;
-            else
+            if (!cfg->palette[i] || !gdk_rgba_parse(&palette[i], cfg->palette[i]))
                 palette[i] = (GdkRGBA){0, 0, 0, 1};
         }
-        if (has_palette)
-            vte_terminal_set_colors(term, NULL, NULL, palette, 16);
+        vte_terminal_set_colors(term, NULL, NULL, palette, 16);
     }
 }
 
