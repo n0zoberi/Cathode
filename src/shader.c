@@ -550,6 +550,7 @@ cathode_shader_overlay_new(CathodeConfig *cfg, GtkWidget *terminal)
 bool
 cathode_shader_is_effect_active(CathodeConfig *cfg)
 {
+    if (!cfg->crt_enabled) return false;
     return cfg->scanline_intensity   > 0.001f ||
            cfg->bloom_strength       > 0.001f ||
            cfg->glow_strength        > 0.001f ||

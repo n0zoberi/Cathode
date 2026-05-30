@@ -251,6 +251,7 @@ cathode_config_default(void)
     cfg->flickering          = 0.0f;
     cfg->glowing_line        = 0.0f;
     cfg->auto_reload         = true;
+    cfg->crt_enabled         = true;
     cfg->fg_color            = g_strdup("#ffffff");
     cfg->bg_color            = g_strdup("#000000");
     return cfg;
@@ -341,7 +342,7 @@ cathode_config_reload(CathodeConfig *cfg)
     RELOAD_SCALAR(cursor_blink);
     RELOAD_SCALAR(font_size);
     RELOAD_SCALAR(auto_reload);
-    RELOAD_SCALAR(palette_set);
+    RELOAD_SCALAR(crt_enabled);
 
     RELOAD_SCALAR(scanline_mode);
     RELOAD_SCALAR(scanline_intensity);

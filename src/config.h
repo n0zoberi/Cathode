@@ -49,6 +49,7 @@ typedef struct {
     char  *cursor_color;
     char  *selection_bg;
     bool   auto_reload;
+    bool   crt_enabled;
 
     char  *palette[16];
     bool   palette_set;

@@ -67,6 +67,16 @@ on_rename_tab(GSimpleAction *action, GVariant *param, gpointer data)
 }
 
 static void
+on_toggle_crt(GSimpleAction *action, GVariant *param, gpointer data)
+{
+    (void)action;
+    (void)param;
+    (void)data;
+    app_config->crt_enabled = !app_config->crt_enabled;
+    cathode_tab_reapply_config(tab_state, app_config);
+}
+
+static void
 on_clear_screen(GSimpleAction *action, GVariant *param, gpointer data)
 {
     (void)action;
@@ -221,6 +231,7 @@ on_activate(GtkApplication *app, gpointer user_data)
         { "decrease-font", on_decrease_font, NULL, NULL, NULL, {0} },
         { "reset-font", on_reset_font, NULL, NULL, NULL, {0} },
         { "rename-tab", on_rename_tab, NULL, NULL, NULL, {0} },
+        { "toggle-crt", on_toggle_crt, NULL, NULL, NULL, {0} },
         { "clear-screen", on_clear_screen, NULL, NULL, NULL, {0} },
         { "reset-terminal", on_reset_terminal, NULL, NULL, NULL, {0} },
         { "open-config", on_open_config, NULL, NULL, NULL, {0} },

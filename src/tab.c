@@ -183,6 +183,7 @@ cathode_tab_view_new(CathodeConfig *c, GtkWindow *window)
     g_menu_append_section(menu, NULL, G_MENU_MODEL(sec2));
 
     GMenu *sec3 = g_menu_new();
+    g_menu_append(sec3, _("Toggle CRT Shader"), "win.toggle-crt");
     g_menu_append(sec3, _("Clear Screen"), "win.clear-screen");
     g_menu_append(sec3, _("Reset Terminal"), "win.reset-terminal");
     g_menu_append_section(menu, NULL, G_MENU_MODEL(sec3));
