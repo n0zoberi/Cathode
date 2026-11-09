@@ -24,18 +24,19 @@ parse_colors_from_table(toml_table_t *table, CathodeConfig *cfg, const char *sec
     toml_table_t *t = toml_table_in(table, section);
     if (!t) return;
 
-    toml_datum_t val;
-
     for (int i = 0; i < 16; i++) {
         char key[16];
         snprintf(key, sizeof(key), "color%d", i);
-        val = toml_string_in(t, key);
-        if (val.ok) {
-            g_free(cfg->palette[i]);
-            cfg->palette[i] = g_strdup(val.u.s);
-            cfg->palette_set = true;
-            free(val.u.s);
-        }
+        toml_datum_t val = toml_string_in(t, key);
+        if (!val.ok) continue;
+
+        /* Bright sections numbered from color0 target palette slots 8-15. */
+        int slot = (strcmp(section, "bright") == 0 && i < 8) ? i + 8 : i;
+
+        g_free(cfg->palette[slot]);
+        cfg->palette[slot] = g_strdup(val.u.s);
+        cfg->palette_set = true;
+        free(val.u.s);
     }
 }
 

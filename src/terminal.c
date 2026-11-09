@@ -46,6 +46,16 @@ cathode_terminal_apply_config(VteTerminal *term, CathodeConfig *cfg)
     vte_terminal_set_cursor_blink_mode(term,
         cathode_cursor_blink_to_vte(cfg->cursor_blink));
 
+    /* set_colors(NULL, NULL, ...) resets fg/bg to VTE defaults; apply custom colors after. */
+    if (cfg->palette_set) {
+        GdkRGBA palette[16];
+        for (int i = 0; i < 16; i++) {
+            if (!cfg->palette[i] || !gdk_rgba_parse(&palette[i], cfg->palette[i]))
+                palette[i] = (GdkRGBA){0, 0, 0, 1};
+        }
+        vte_terminal_set_colors(term, NULL, NULL, palette, 16);
+    }
+
     GdkRGBA rgba;
     if (cfg->fg_color && gdk_rgba_parse(&rgba, cfg->fg_color))
         vte_terminal_set_color_foreground(term, &rgba);
@@ -58,15 +68,6 @@ cathode_terminal_apply_config(VteTerminal *term, CathodeConfig *cfg)
 
     if (cfg->selection_bg && gdk_rgba_parse(&rgba, cfg->selection_bg))
         vte_terminal_set_color_highlight(term, &rgba);
-
-    if (cfg->palette_set) {
-        GdkRGBA palette[16];
-        for (int i = 0; i < 16; i++) {
-            if (!cfg->palette[i] || !gdk_rgba_parse(&palette[i], cfg->palette[i]))
-                palette[i] = (GdkRGBA){0, 0, 0, 1};
-        }
-        vte_terminal_set_colors(term, NULL, NULL, palette, 16);
-    }
 }
 
 void
