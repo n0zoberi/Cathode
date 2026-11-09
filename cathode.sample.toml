@@ -16,7 +16,6 @@ cursor_blink = "on"
 
 [shell]
 program = "/bin/zsh"
-# args = []
 
 [env]
 TERM = "xterm-256color"
@@ -33,7 +32,7 @@ size = 12
 # scanline_mode = 0
 
 # Scanline darkness. (0.0–1.0).
-# Default: 0.12
+# Default: 0.06
 scanline_intensity = 0.12
 
 # Pixel rows per scanline group.
@@ -49,7 +48,7 @@ bloom_strength = 0.30
 bloom_sigma = 4.5
 
 # Warm P22 phosphor glow intensity on bright text.
-# Default: 0.2
+# Default: 0.13
 glow_strength = 0.2
 
 # Glow min luma threshold. (0.0–1.0).
@@ -111,20 +110,3 @@ film_grain = 0.005
 # Scrolling bright horizontal scanline overlay. (0.0–0.5).
 # Default: 0.0 (off)
 # glowing_line = 0.2
-
-[bindings]
-keys = [
-  { key = "C", with = "Control | alt", action = "Copy" },
-  { key = "V", with = "Control | alt", action = "Paste" },
-  { key = "PageUp", with = "alt", action = "ScrollPageUp" },
-  { key = "PageDown", with = "alt", action = "ScrollPageDown" },
-  { key = "Up", with = "alt", action = "ScrollUp" },
-  { key = "Down", with = "alt", action = "ScrollDown" },
-  { key = "Equal", with = "Control", action = "IncreaseFontSize" },
-  { key = "Minus", with = "Control", action = "DecreaseFontSize" },
-  { key = "Digit0", with = "Control | alt", action = "ResetFontSize" },
-  { key = "Enter", with = "Control | alt", action = "Toggle3DMode" },
-  { key = "M", with = "Control | alt", action = "ToggleMobiusMode" },
-  { key = "Up", with = "Control | alt", action = "IncreaseWarp" },
-  { key = "Down", with = "Control | alt", action = "DecreaseWarp" },
-]

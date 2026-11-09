@@ -9,10 +9,7 @@ static VteTerminal *
 get_terminal_from_page(AdwTabPage *page)
 {
     GtkWidget *overlay = adw_tab_page_get_child(page);
-    GtkWidget *first = gtk_widget_get_first_child(overlay);
-    if (first && VTE_IS_TERMINAL(first))
-        return VTE_TERMINAL(first);
-    return NULL;
+    return overlay ? cathode_shader_overlay_get_terminal(overlay) : NULL;
 }
 
 static void

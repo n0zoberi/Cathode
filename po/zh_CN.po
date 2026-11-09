@@ -74,3 +74,7 @@ msgstr "关闭 Cathode？"
 #: src/app.c
 msgid "Close All"
 msgstr "全部关闭"
+
+#: src/app.c
+msgid "There are %d open tabs. Close anyway?"
+msgstr "当前有 %d 个标签页，仍要关闭吗？"

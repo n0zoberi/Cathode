@@ -177,7 +177,7 @@ on_close_request(GtkWindow *window, gpointer data)
     if (n <= 1)
         return FALSE;
 
-    char *body = g_strdup_printf("There are %d open tabs. Close anyway?", n);
+    char *body = g_strdup_printf(_("There are %d open tabs. Close anyway?"), n);
     AdwAlertDialog *dialog = ADW_ALERT_DIALOG(
         adw_alert_dialog_new(_("Close Cathode?"), body));
     g_free(body);
@@ -216,6 +216,11 @@ static void
 on_activate(GtkApplication *app, gpointer user_data)
 {
     (void)user_data;
+
+    if (tab_state && tab_state->win) {
+        gtk_window_present(tab_state->win);
+        return;
+    }
 
     GtkWidget *window = adw_application_window_new(app);
     gtk_window_set_default_size(GTK_WINDOW(window), 900, 600);

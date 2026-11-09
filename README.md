@@ -42,7 +42,6 @@ All effects are configurable individually. Set any parameter to `0` to disable i
 - Multiple tabs via AdwTabView + AdwTabBar
 - Ctrl+Shift+F search bar with VTE regex, Enter/Shift+Enter navigation
 - Header bar menu: copy, paste, search, tabs, clear screen, reset terminal, open config, quit
-- Customizable key bindings via TOML config
 
 **Configuration**
 
@@ -106,16 +105,19 @@ See [`cathode.sample.toml`](cathode.sample.toml) for the complete reference with
 | `bloom_sigma` | `4.5` | Bloom blur radius (gaussian sigma) |
 | `halation_strength` | `0.10` | Glass light diffusion intensity |
 | `halation_sigma` | `8.0` | Halation blur radius (gaussian sigma) |
-| `glow_strength` | `0.2` | Phosphor glow on bright text |
+| `glow_strength` | `0.13` | Phosphor glow on bright text |
 | `glow_threshold_low` | `0.0` | Min luma for glow effect |
 | `glow_threshold_high` | `1.0` | Luma threshold for full glow |
 | `mask_strength` | `0.012` | Aperture grille stripe visibility |
 | `curvature` | `0.0` | Barrel distortion |
 | `chromatic_aberration` | `0.0` | RGB separation at edges |
 | `softening` | `0.12` | Sub-pixel edge softening |
+| `color_bleed` | `0.08` | Horizontal phosphor-trail color smear |
 | `rounding` | `0.15` | Pixel roundness (beam spot) |
 | `shadow_strength` | `0.10` | Bezel + inner depth shadow |
+| `vignette_strength` | `0.0` | Glass-depth corner darkening |
 | `burn_in` | `0.0` | Phosphor persistence ghosting |
+| `film_grain` | `0.005` | Phosphor coating noise |
 | `jitter` | `0.0` | Electron beam jitter |
 | `flickering` | `0.0` | Brightness ripple (PSU) |
 | `glowing_line` | `0.0` | Scrolling retrace line |
@@ -156,8 +158,6 @@ Primary colors can also be nested under `[colors.primary]` with optional `cursor
 | Ctrl+0 | Reset font size |
 | Ctrl+Tab / Ctrl+PgDown | Next tab |
 | Ctrl+Shift+Tab / Ctrl+PgUp | Previous tab |
-
-Key bindings can be customized via the `[bindings]` table in `cathode.toml`.
 
 ## License
 

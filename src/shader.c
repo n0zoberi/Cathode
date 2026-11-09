@@ -18,7 +18,6 @@ typedef struct {
 
     int     width, height;
     bool    initialized;
-    bool    needs_redraw;
     guint   redraw_idle_id;
     guint   tick_id;
 
@@ -524,9 +523,6 @@ cathode_shader_overlay_new(CathodeConfig *cfg, GtkWidget *terminal)
 
     st->gl_area = GTK_GL_AREA(gl_widget);
 
-    g_object_set_data_full(G_OBJECT(gl_widget), "cathode-shader",
-                           st, shader_state_free);
-
     g_signal_connect(gl_widget, "realize", G_CALLBACK(realize_cb), st);
     g_signal_connect(gl_widget, "unrealize", G_CALLBACK(unrealize_cb), st);
     g_signal_connect(gl_widget, "render", G_CALLBACK(render_cb), st);
@@ -540,6 +536,9 @@ cathode_shader_overlay_new(CathodeConfig *cfg, GtkWidget *terminal)
     gtk_overlay_set_child(GTK_OVERLAY(overlay), terminal);
     gtk_overlay_add_overlay(GTK_OVERLAY(overlay), gl_widget);
     st->overlay = overlay;
+
+    g_object_set_data_full(G_OBJECT(overlay), "cathode-shader",
+                           st, shader_state_free);
 
     if (!cathode_shader_is_effect_active(cfg))
         gtk_widget_set_visible(gl_widget, FALSE);
@@ -572,20 +571,14 @@ cathode_shader_is_effect_active(CathodeConfig *cfg)
 static CathodeShaderState *
 get_shader_state_from_overlay(GtkWidget *overlay)
 {
-    for (GtkWidget *child = gtk_widget_get_first_child(overlay); child;
-         child = gtk_widget_get_next_sibling(child)) {
-        if (GTK_IS_GL_AREA(child))
-            return g_object_get_data(G_OBJECT(child), "cathode-shader");
-    }
-    return NULL;
+    return g_object_get_data(G_OBJECT(overlay), "cathode-shader");
 }
 
-void
-cathode_shader_queue_redraw(GtkWidget *overlay)
+VteTerminal *
+cathode_shader_overlay_get_terminal(GtkWidget *overlay)
 {
     CathodeShaderState *st = get_shader_state_from_overlay(overlay);
-    if (st)
-        queue_redraw_idle(st);
+    return st && st->terminal ? VTE_TERMINAL(st->terminal) : NULL;
 }
 
 void
