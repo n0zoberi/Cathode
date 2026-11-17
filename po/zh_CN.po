@@ -78,3 +78,35 @@ msgstr "全部关闭"
 #: src/app.c
 msgid "There are %d open tabs. Close anyway?"
 msgstr "当前有 %d 个标签页，仍要关闭吗？"
+
+#: src/tab.c
+msgid "Toggle CRT Shader"
+msgstr "切换 CRT 滤镜"
+
+#: src/search.c
+msgid "Toggle case sensitivity"
+msgstr "切换区分大小写"
+
+#: src/search.c
+msgid "Previous match"
+msgstr "上一个匹配"
+
+#: src/search.c
+msgid "Next match"
+msgstr "下一个匹配"
+
+#: src/search.c
+msgid "Close search"
+msgstr "关闭搜索"
+
+#: src/terminal.c
+msgid "Shell Failed"
+msgstr "Shell 启动失败"
+
+#: src/terminal.c
+msgid "Could not start the configured shell. Falling back to /bin/sh."
+msgstr "无法启动配置的 shell，正在回退到 /bin/sh。"
+
+#: src/terminal.c
+msgid "Could not start a shell. Check your configuration."
+msgstr "无法启动 shell，请检查配置。"

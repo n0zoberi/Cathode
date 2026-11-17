@@ -3,5 +3,6 @@
   <gresource prefix="/com/n0zoberi/Cathode/shaders">
     <file alias="retro.vert" compressed="true">../shaders/retro.vert</file>
     <file alias="retro.frag" compressed="true">../shaders/retro.frag</file>
+    <file alias="blur.frag" compressed="true">../shaders/blur.frag</file>
   </gresource>
 </gresources>

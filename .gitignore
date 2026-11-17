@@ -1,4 +1,5 @@
 /build/
+/build-*/
 /subprojects/tomlc99*
 /subprojects/packagecache/
 .gcc-*

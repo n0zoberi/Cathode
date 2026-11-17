@@ -1,4 +1,6 @@
 #include "terminal.h"
+#include <adwaita.h>
+#include <glib/gi18n.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -90,23 +92,25 @@ cathode_cursor_blink_to_vte(CursorBlinkMode mode)
     }
 }
 
-void
-cathode_terminal_spawn(VteTerminal *term, CathodeConfig *cfg)
-{
-    const char *shell = cfg->shell_program;
-    if (!shell || !*shell) {
-        shell = g_getenv("SHELL");
-        if (!shell)
-            shell = "/bin/sh";
-    }
+typedef struct {
+    VteTerminal   *term;
+    CathodeConfig *cfg;
+    bool           tried_fallback;
+} SpawnData;
 
+static void on_spawn_done(VteTerminal *term, GPid pid, GError *error,
+                          gpointer data);
+
+static void
+spawn_shell(SpawnData *sd, const char *shell)
+{
     char **envp = g_get_environ();
-    if (cfg->term)
-        envp = g_environ_setenv(envp, "TERM", cfg->term, TRUE);
+    if (sd->cfg->term)
+        envp = g_environ_setenv(envp, "TERM", sd->cfg->term, TRUE);
 
     char *argv[] = { (char *)shell, NULL };
 
-    vte_terminal_spawn_async(term,
+    vte_terminal_spawn_async(sd->term,
         VTE_PTY_DEFAULT,
         NULL,
         argv,
@@ -115,7 +119,79 @@ cathode_terminal_spawn(VteTerminal *term, CathodeConfig *cfg)
         NULL, NULL, NULL,
         -1,
         NULL,
-        NULL, NULL);
+        on_spawn_done, sd);
 
     g_strfreev(envp);
+}
+
+static void
+spawn_data_free(SpawnData *sd)
+{
+    if (sd->term)
+        g_object_remove_weak_pointer(G_OBJECT(sd->term), (gpointer *)&sd->term);
+    g_free(sd);
+}
+
+static void
+show_spawn_message(VteTerminal *term, const char *title, const char *body)
+{
+    GtkRoot *root = gtk_widget_get_root(GTK_WIDGET(term));
+    if (!GTK_IS_WINDOW(root))
+        return;
+
+    AdwAlertDialog *dialog = ADW_ALERT_DIALOG(
+        adw_alert_dialog_new(title, body));
+    adw_alert_dialog_add_responses(dialog, "ok", _("OK"), NULL);
+    adw_alert_dialog_set_default_response(dialog, "ok");
+    adw_alert_dialog_set_close_response(dialog, "ok");
+    adw_dialog_present(ADW_DIALOG(dialog), GTK_WIDGET(root));
+}
+
+static void
+on_spawn_done(VteTerminal *term, GPid pid, GError *error, gpointer data)
+{
+    (void)pid;
+    SpawnData *sd = data;
+
+    if (!sd->term) {
+        g_free(sd);
+        return;
+    }
+
+    if (!error) {
+        spawn_data_free(sd);
+        return;
+    }
+
+    g_warning("Shell spawn failed: %s", error->message);
+
+    if (!sd->tried_fallback) {
+        sd->tried_fallback = true;
+        show_spawn_message(term, _("Shell Failed"),
+            _("Could not start the configured shell. Falling back to /bin/sh."));
+        spawn_shell(sd, "/bin/sh");
+        return;
+    }
+
+    show_spawn_message(term, _("Shell Failed"),
+        _("Could not start a shell. Check your configuration."));
+    spawn_data_free(sd);
+}
+
+void
+cathode_terminal_spawn(VteTerminal *term, CathodeConfig *cfg)
+{
+    const char *shell = cfg->shell_program;
+    if (!shell || !*shell) {
+        shell = g_getenv("SHELL");
+        if (!shell || !*shell)
+            shell = "/bin/sh";
+    }
+
+    SpawnData *sd = g_new0(SpawnData, 1);
+    sd->term = term;
+    sd->cfg = cfg;
+    g_object_add_weak_pointer(G_OBJECT(term), (gpointer *)&sd->term);
+
+    spawn_shell(sd, shell);
 }

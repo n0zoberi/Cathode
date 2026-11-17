@@ -25,10 +25,11 @@ A GTK4/libadwaita terminal emulator with a retro CRT scanline shader. GPU‑acce
 
 ## Features
 
-**CRT Effect Pipeline** — 18 configurable effects rendered in a single GPU pass:
+**CRT Effect Pipeline** — 16 configurable effect groups rendered with separable
+bloom/glow passes on the GPU:
 
 - **Beam & Geometry** — Curvature (barrel distortion), beam jitter, chromatic aberration
-- **Phosphor Light** — Halation, isotropic bloom, warm P22 phosphor glow
+- **Phosphor Light** — Isotropic bloom, warm P22 phosphor glow
 - **Beam Spot** — Sub-pixel softening, pixel rounding (gaussian spot profile)
 - **Physical Mask** — Scanlines (gaussian beam or square wave), aperture grille / shadow mask
 - **Glass & Enclosure** — Bezel depth shadows, inner edge falloff, corner vignette
@@ -58,7 +59,7 @@ All effects are configurable individually. Set any parameter to `0` to disable i
 |---|---|
 | gtk4 | >= 4.12 |
 | libadwaita-1 | >= 1.4 |
-| vte-2.91-gtk4 | >= 0.74 |
+| vte-2.91-gtk4 | >= 0.78 |
 | epoxy | >= 1.5 |
 | cairo | >= 1.16 |
 | glib-2.0 | >= 2.76 |
@@ -73,6 +74,26 @@ meson install -C build
 ```
 
 Installs the binary, desktop entry, icons, and sample config into standard prefix paths.
+
+### Development
+
+Run the unit tests (config parsing, reload semantics, shader effect detection):
+
+```bash
+meson setup build -Dtests=enabled
+meson compile -C build
+meson test -C build --print-errorlogs
+```
+
+Build with AddressSanitizer and UndefinedBehaviorSanitizer:
+
+```bash
+meson setup build-asan -Db_sanitize=address,undefined
+meson compile -C build-asan
+```
+
+CI builds with `--werror` on gcc and clang; VTE >= 0.78 is required because the
+terminal property API is not available in older releases.
 
 ### Arch Linux
 
@@ -103,8 +124,6 @@ See [`cathode.sample.toml`](cathode.sample.toml) for the complete reference with
 | `scanline_period` | `6` | Pixel rows per scanline group |
 | `bloom_strength` | `0.30` | 2D gaussian bloom blend factor |
 | `bloom_sigma` | `4.5` | Bloom blur radius (gaussian sigma) |
-| `halation_strength` | `0.10` | Glass light diffusion intensity |
-| `halation_sigma` | `8.0` | Halation blur radius (gaussian sigma) |
 | `glow_strength` | `0.13` | Phosphor glow on bright text |
 | `glow_threshold_low` | `0.0` | Min luma for glow effect |
 | `glow_threshold_high` | `1.0` | Luma threshold for full glow |
@@ -144,6 +163,13 @@ color9  = "#ff5555"
 
 Primary colors can also be nested under `[colors.primary]` with optional `cursor` and `selection_background` fields.
 
+### Runtime Changes and Auto-Reload
+
+The **Toggle CRT Shader** menu item and the font-size shortcuts modify the
+in-memory configuration only. When `auto_reload` is enabled, saving the config
+file reloads it and overwrites those runtime changes with the file values.
+Persist any change you want to keep in `cathode.toml`.
+
 ## Keyboard Shortcuts
 
 | Shortcut | Action |
@@ -162,6 +188,8 @@ Primary colors can also be nested under `[colors.primary]` with optional `cursor
 ## License
 
 MIT. The bundled TOML parser, [tomlc99](https://github.com/cktan/tomlc99), is also MIT.
+The vendored snapshot and its upstream commit are recorded in
+[`src/vendor/tomlc99/VERSION`](src/vendor/tomlc99/VERSION).
 
 ## Acknowledgments
 

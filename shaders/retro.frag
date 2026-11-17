@@ -5,6 +5,8 @@ in vec2 v_tex;
 out vec4 frag_color;
 
 uniform sampler2D u_terminal;
+uniform sampler2D u_bloom_tex;
+uniform sampler2D u_glow_tex;
 uniform float     u_time;
 uniform vec2      u_resolution;
 uniform vec4      u_background;
@@ -72,8 +74,8 @@ void main()
     vec2 centered = uv * 2.0 - 1.0;
     float dist_sq = dot(centered, centered);
 
-    // ---- Gamma: sRGB input → linear space ----
-    vec3 col = srgb_to_linear(texture(u_terminal, uv).rgb);
+    // ---- Terminal texture is sRGB; hardware decodes it to linear ----
+    vec3 col = texture(u_terminal, uv).rgb;
 
     // ---- Screen curvature (barrel distortion) ----
     if (u_curvature > 0.0001) {
@@ -100,9 +102,9 @@ void main()
         if (r2 > 0.0001) {
             vec2 dir = centered * inversesqrt(r2);
             float d = u_chromatic_aberration * r2 * 2.5;
-            col.r = srgb_to_linear(texture(u_terminal, uv + dir * d).rgb).r;
-            col.g = srgb_to_linear(texture(u_terminal, uv).rgb).g;
-            col.b = srgb_to_linear(texture(u_terminal, uv - dir * d).rgb).b;
+            col.r = texture(u_terminal, uv + dir * d).r;
+            col.g = texture(u_terminal, uv).g;
+            col.b = texture(u_terminal, uv - dir * d).b;
         }
     }
 
@@ -113,7 +115,7 @@ void main()
         for (int y = -1; y <= 1; y++) {
             for (int x = -1; x <= 1; x++) {
                 float w = exp(-1.0 * float(x*x + y*y));
-                soft += srgb_to_linear(texture(u_terminal, uv + vec2(float(x), float(y)) * texel).rgb) * w;
+                soft += texture(u_terminal, uv + vec2(float(x), float(y)) * texel).rgb * w;
                 total += w;
             }
         }
@@ -128,7 +130,7 @@ void main()
             float t = float(i);
             float bias = 1.0 + (t > 0.0 ? 0.35 : 0.0);
             float w = exp(-0.22 * t * t) * bias;
-            bleed += srgb_to_linear(texture(u_terminal, uv + vec2(t * texel.x, 0.0)).rgb) * w;
+            bleed += texture(u_terminal, uv + vec2(t * texel.x, 0.0)).rgb * w;
             total += w;
         }
         bleed /= total;
@@ -137,55 +139,22 @@ void main()
         col = mix(col, bleed, weight);
     }
 
-    // ---- Bloom (isotropic 2D gaussian, retro.hlsl style) ----
-    if (u_bloom_strength > 0.001) {
-        float sigma = max(u_bloom_sigma, 0.5);
-        int radius = int(ceil(sigma * 2.5));
-        radius = clamp(radius, 1, 13);
+    // Screen-space UV for the intermediate blur textures (blur passes render
+    // in screen orientation, while the terminal texture is stored flipped).
+    vec2 screen_uv = vec2(uv.x, 1.0 - uv.y);
 
-        vec3 bloom_sum = vec3(0.0);
-        float total = 0.0;
-        for (int y = -radius; y <= radius; y++) {
-            for (int x = -radius; x <= radius; x++) {
-                float w = exp(-0.5 * float(x*x + y*y) / (sigma * sigma));
-                bloom_sum += srgb_to_linear(texture(u_terminal, uv + vec2(float(x), float(y)) * texel).rgb) * w;
-                total += w;
-            }
-        }
-        vec3 bloom = bloom_sum / max(total, 0.001);
+    // ---- Bloom (separable gaussian, computed in the blur passes) ----
+    if (u_bloom_strength > 0.001) {
+        vec3 bloom = texture(u_bloom_tex, screen_uv).rgb;
         col.rgb += bloom * u_bloom_strength;
     }
 
-    // ---- Phosphor glow (P22 warm spatial halo) ----
+    // ---- Phosphor glow (P22 warm spatial halo, separable + gated) ----
     if (u_glow_strength > 0.001) {
-        float sigma = 1.2 + u_glow_strength * 10.0;
-        float sigma_h = sigma * 1.5;
-        float sigma_v = sigma * 0.6;
-        int spread = int(ceil(sigma * 3.0));
-        spread = clamp(spread, 1, 6);
-
-        vec3 glow = vec3(0.0);
-        float total = 0.0;
-
-        for (int y = -spread; y <= spread; y++) {
-            float wy = exp(-abs(float(y)) / sigma_v);
-            for (int x = -spread; x <= spread; x++) {
-                float wx = exp(-abs(float(x)) / sigma_h);
-                float w = wx * wy;
-                vec3 s = srgb_to_linear(texture(u_terminal, uv + vec2(float(x), float(y)) * texel).rgb);
-                float slum = luma(s);
-                float sgate = smoothstep(u_glow_threshold_low,
-                                         u_glow_threshold_high, slum);
-                vec3 phosphorWeight = vec3(1.0, 1.15, 0.85);
-                glow += s * phosphorWeight * w * sgate;
-                total += w;
-            }
-        }
-
-        glow /= max(total, 0.001);
-
+        vec3 glow = texture(u_glow_tex, screen_uv).rgb;
+        vec3 phosphor_weight = vec3(1.0, 1.15, 0.85);
         float brightness = max(col.r, max(col.g, col.b));
-        col.rgb += glow * u_glow_strength * 2.5 * brightness;
+        col.rgb += glow * phosphor_weight * u_glow_strength * 2.5 * brightness;
     }
 
     // ---- Pixel rounding (2D gaussian beam spot) ----

@@ -1,3 +1,5 @@
 src/app.c
 src/tab.c
 src/main.c
+src/search.c
+src/terminal.c

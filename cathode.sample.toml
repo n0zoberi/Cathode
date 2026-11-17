@@ -1,8 +1,9 @@
 [general]
 # Theme files to import — paths starting with ~/ expand to $HOME/.
-import = [
-    "~/.config/cathode/themes/{theme}.toml"
-]
+# Uncomment and replace the example file name with your theme.
+# import = [
+#     "~/.config/cathode/themes/dracula.toml"
+# ]
 
 # Auto-reload config on file change (default: true).
 auto_reload = true
@@ -15,7 +16,8 @@ scrollback = 2000
 cursor_blink = "on"
 
 [shell]
-program = "/bin/zsh"
+# Shell to launch. Leave unset to follow $SHELL (falling back to /bin/sh).
+# program = "/bin/bash"
 
 [env]
 TERM = "xterm-256color"
@@ -36,8 +38,8 @@ size = 12
 scanline_intensity = 0.12
 
 # Pixel rows per scanline group.
-# Default: 6.0
-scanline_period = 6.0
+# Default: 6
+scanline_period = 6
 
 # 2D gaussian bloom blend factor (retro.hlsl style). (0.0–1.0).
 # Default: 0.30

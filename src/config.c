@@ -1,5 +1,7 @@
 #include "config.h"
 #include "vendor/tomlc99/toml.h"
+#include <limits.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -25,7 +27,7 @@ parse_colors_from_table(toml_table_t *table, CathodeConfig *cfg, const char *sec
     if (!t) return;
 
     for (int i = 0; i < 16; i++) {
-        char key[16];
+        char key[32];
         snprintf(key, sizeof(key), "color%d", i);
         toml_datum_t val = toml_string_in(t, key);
         if (!val.ok) continue;
@@ -55,7 +57,17 @@ parse_crt(toml_table_t *root, CathodeConfig *cfg)
     if (d.ok) cfg->scanline_intensity = (float)d.u.d;
 
     d = toml_int_in(t, "scanline_period");
-    if (d.ok) cfg->scanline_period = (int)d.u.i;
+    if (d.ok) {
+        cfg->scanline_period = (int)d.u.i;
+    } else {
+        toml_datum_t dd = toml_double_in(t, "scanline_period");
+        if (dd.ok) {
+            double v = dd.u.d;
+            if (v < INT_MIN) v = INT_MIN;
+            if (v > INT_MAX) v = INT_MAX;
+            cfg->scanline_period = (int)llround(v);
+        }
+    }
 
     d = toml_double_in(t, "bloom_strength");
     if (d.ok) cfg->bloom_strength = (float)d.u.d;
@@ -220,13 +232,45 @@ merge_theme_table(toml_table_t *root, CathodeConfig *cfg)
     parse_colors_from_table(colors, cfg, "bright");
 }
 
+static int
+clamp_int_value(const char *key, int value, int min, int max)
+{
+    if (value < min) {
+        g_warning("%s=%d is out of range, clamped to %d", key, value, min);
+        return min;
+    }
+    if (value > max) {
+        g_warning("%s=%d is out of range, clamped to %d", key, value, max);
+        return max;
+    }
+    return value;
+}
+
+static void
+validate_config(CathodeConfig *cfg)
+{
+    cfg->scanline_period = clamp_int_value("crt.scanline_period",
+                                           cfg->scanline_period, 1, INT_MAX);
+    cfg->font_size = clamp_int_value("font.size", cfg->font_size, 4, 72);
+    cfg->scrollback = clamp_int_value("terminal.scrollback",
+                                      cfg->scrollback, 0, INT_MAX);
+
+    if (cfg->glow_threshold_low > cfg->glow_threshold_high) {
+        g_warning("crt.glow_threshold_low (%f) > crt.glow_threshold_high (%f); swapping",
+                  cfg->glow_threshold_low, cfg->glow_threshold_high);
+        float tmp = cfg->glow_threshold_low;
+        cfg->glow_threshold_low = cfg->glow_threshold_high;
+        cfg->glow_threshold_high = tmp;
+    }
+}
+
 CathodeConfig *
 cathode_config_default(void)
 {
     CathodeConfig *cfg = g_new0(CathodeConfig, 1);
     cfg->scrollback          = 2000;
     cfg->cursor_blink        = CURSOR_BLINK_ON;
-    cfg->shell_program       = g_strdup("/bin/zsh");
+    cfg->shell_program       = NULL;
     cfg->term                = g_strdup("xterm-256color");
     cfg->font_family         = g_strdup("monospace");
     cfg->font_size           = 11;
@@ -326,6 +370,8 @@ cathode_config_load(void)
         }
     }
 
+    validate_config(cfg);
+
     g_free(config_path);
     return cfg;
 }
@@ -344,6 +390,7 @@ cathode_config_reload(CathodeConfig *cfg)
     RELOAD_SCALAR(font_size);
     RELOAD_SCALAR(auto_reload);
     RELOAD_SCALAR(crt_enabled);
+    RELOAD_SCALAR(palette_set);
 
     RELOAD_SCALAR(scanline_mode);
     RELOAD_SCALAR(scanline_intensity);

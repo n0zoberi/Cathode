@@ -1,0 +1,6 @@
+tomlc99 (vendored snapshot)
+Upstream: https://github.com/cktan/tomlc99
+toml.c blob: e7b878ee0b79d8aa6cdc69758aa63eae4e4e143e
+toml.h blob: c6aabd0d61e90ea2e2492add23c66244506fb106
+Last upstream change to both files: 6fe7fee127c4d1ceea71e24405e62d01ce1f0840 (2023-09-19)
+Verified against upstream master: 2026-11-17

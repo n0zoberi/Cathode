@@ -4,6 +4,8 @@
 #include <adwaita.h>
 #include <glib/gi18n.h>
 
+/* Flags are forwarded to PCRE2 by VTE. Values match pcre2.h (PCRE2 10.x);
+ * VTE does not export pcre2 in its pkg-config flags, so they stay local. */
 #define PCRE2_MULTILINE 0x00000400u
 #define PCRE2_CASELESS  0x00000008u
 
@@ -22,6 +24,8 @@ static void
 search_state_free(gpointer data)
 {
     SearchState *st = data;
+    if (st->term)
+        g_object_remove_weak_pointer(G_OBJECT(st->term), (gpointer *)&st->term);
     g_free(st->last_search);
     g_free(st);
 }
@@ -56,17 +60,14 @@ update_regex(SearchState *st)
     g_free(st->last_search);
     st->last_search = g_strdup(text);
 
-    if (!narrowing)
-        vte_terminal_search_find_previous(st->term);
-
     vte_terminal_search_set_regex(st->term, regex, 0);
     vte_terminal_search_set_wrap_around(st->term, TRUE);
     vte_regex_unref(regex);
 
-    if (narrowing)
-        vte_terminal_search_find_previous(st->term);
-
-    vte_terminal_search_find_next(st->term);
+    /* Extending the query keeps the current match in view; a new query
+     * jumps to the first match at or after the current position. */
+    if (!narrowing)
+        vte_terminal_search_find_next(st->term);
 }
 
 static void
@@ -209,11 +210,15 @@ cathode_search_set_terminal(GtkWidget *widget, VteTerminal *terminal)
     SearchState *st = g_object_get_data(G_OBJECT(widget), "search-state");
     if (!st) return;
 
-    if (st->term)
+    if (st->term) {
         vte_terminal_search_set_regex(st->term, NULL, 0);
+        g_object_remove_weak_pointer(G_OBJECT(st->term), (gpointer *)&st->term);
+    }
     st->term = terminal;
 
     if (!terminal) return;
+
+    g_object_add_weak_pointer(G_OBJECT(terminal), (gpointer *)&st->term);
 
     vte_terminal_search_set_wrap_around(terminal, TRUE);
 

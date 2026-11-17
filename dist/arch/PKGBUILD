@@ -18,6 +18,8 @@ depends=(
 )
 makedepends=('meson' 'ninja' 'pkgconf' 'gettext')
 source=("$pkgname-$pkgver.tar.gz::$url/archive/v$pkgver.tar.gz")
+# Replace SKIP with the v$pkgver archive hash once the release tag exists:
+#   curl -L "$url/archive/v$pkgver.tar.gz" | sha256sum
 sha256sums=('SKIP')
 
 _srcdir="Cathode-$pkgver"

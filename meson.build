@@ -11,7 +11,7 @@ project('cathode', 'c',
 
 gtk4_dep       = dependency('gtk4',       version: '>= 4.12')
 adwaita_dep    = dependency('libadwaita-1', version: '>= 1.4')
-vte_dep        = dependency('vte-2.91-gtk4', version: '>= 0.74')
+vte_dep        = dependency('vte-2.91-gtk4', version: '>= 0.78')
 epoxy_dep      = dependency('epoxy',      version: '>= 1.5')
 glib_dep       = dependency('glib-2.0',   version: '>= 2.76')
 
@@ -20,6 +20,10 @@ add_project_arguments('-DLOCALEDIR="' + get_option('prefix') / get_option('local
 
 subdir('src')
 subdir('po')
+
+if get_option('tests').allowed()
+  subdir('tests')
+endif
 
 install_data('data/com.n0zoberi.Cathode.desktop',
   install_dir: get_option('datadir') / 'applications',

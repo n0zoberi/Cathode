@@ -110,7 +110,6 @@ on_open_config(GSimpleAction *action, GVariant *param, gpointer data)
     gtk_file_launcher_launch(launcher, window, NULL, NULL, NULL);
     g_object_unref(launcher);
     g_object_unref(file);
-    g_free(path);
 }
 
 static void
@@ -210,6 +209,8 @@ on_window_destroy(GtkWindow *_window, GtkApplication *app)
     GList *windows = gtk_application_get_windows(app);
     if (g_list_length(windows) <= 1)
         g_application_quit(G_APPLICATION(app));
+    g_free(tab_state);
+    tab_state = NULL;
 }
 
 static void
@@ -294,7 +295,8 @@ reload_config_cb(gpointer data)
     reload_debounce_id = 0;
     g_message("Config file changed, reloading...");
     cathode_config_reload(app_config);
-    cathode_tab_reapply_config(tab_state, app_config);
+    if (tab_state)
+        cathode_tab_reapply_config(tab_state, app_config);
     return G_SOURCE_REMOVE;
 }
 
